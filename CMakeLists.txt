@@ -29,7 +29,6 @@ if ( NOT Boost_FOUND )
 endif()
 
 # include for local directory
-include_directories( BEFORE include )
 
 # include for local package
 
@@ -37,7 +36,7 @@ include_directories( BEFORE include )
 # Creating entries for target: test
 # ############################
 
-add_executable( test  firstp.cpp )
+add_executable( test  )
 
 add_to_cached_list( CGAL_EXECUTABLE_TARGETS test )
 

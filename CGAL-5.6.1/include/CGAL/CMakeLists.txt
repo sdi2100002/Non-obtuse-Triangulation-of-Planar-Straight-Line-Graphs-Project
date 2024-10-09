@@ -29,18 +29,21 @@ if ( NOT Boost_FOUND )
 endif()
 
 # include for local directory
-include_directories( BEFORE include )
+add_subdirectory(include)
+list(APPEND EXTRA_LIBS utils)
+#include_directories( BEFORE include )
+
+add_definitions(-DCGAL_USE_BASIC_VIEWER)  # Enable viewer functionality
 
 # include for local package
 
 
 # Creating entries for target: test
+
 # ############################
 
 add_executable( test  firstp.cpp )
 
-add_to_cached_list( CGAL_EXECUTABLE_TARGETS test )
 
 # Link the executable to CGAL and third-party libraries
-target_link_libraries(test PRIVATE CGAL::CGAL )
-
+target_link_libraries(test PRIVATE CGAL::CGAL ${EXTRA_LIBS})
