@@ -17,43 +17,14 @@
 //Build the testing tree.
 BUILD_TESTING:BOOL=OFF
 
-//Activate the debug messages of the script FindBoost
-Boost_DEBUG:BOOL=OFF
-
-//The directory containing a CMake configuration file for Boost.
-Boost_DIR:PATH=/usr/lib/x86_64-linux-gnu/cmake/Boost-1.83.0
-
-//Path to a file.
-Boost_INCLUDE_DIR:PATH=/usr/include
-
-//Value Computed by CMake
-CGAL-5.6.1_BINARY_DIR:STATIC=/home/dimitris/Project1/CGAL-5.6.1/build
-
-//Value Computed by CMake
-CGAL-5.6.1_IS_TOP_LEVEL:STATIC=ON
-
-//Value Computed by CMake
-CGAL-5.6.1_SOURCE_DIR:STATIC=/home/dimitris/Project1/CGAL-5.6.1
-
 //Value Computed by CMake
 CGAL_BINARY_DIR:STATIC=/home/dimitris/Project1/CGAL-5.6.1/build
-
-//Link with static Boost libraries
-CGAL_Boost_USE_STATIC_LIBS:BOOL=OFF
-
-//Setting for advanced users that what to change the default number
-// types used in filtered kernels. Some options might not be working
-// depending on how you configured your build.
-CGAL_CMAKE_EXACT_NT_BACKEND:STRING=Default
 
 //Display memory and real time usage at end of CTest test outputs
 CGAL_CTEST_DISPLAY_MEM_AND_TIME:BOOL=OFF
 
 //Activate the CGAL developers mode. See https://github.com/CGAL/cgal/wiki/CGAL_DEV_MODE
 CGAL_DEV_MODE:BOOL=OFF
-
-//The directory containing a CMake configuration file for CGAL.
-CGAL_DIR:PATH=/usr/local/lib/cmake/CGAL
 
 //The folder where CGAL user-side scripts will be installed, relative
 // to CMAKE_INSTALL_PREFIX
@@ -88,10 +59,6 @@ CGAL_SOURCE_DIR:STATIC=/home/dimitris/Project1/CGAL-5.6.1
 //If set, the ctest command will not skip the tests of the draw
 // functions.
 CGAL_TEST_DRAW_FUNCTIONS:BOOL=OFF
-
-//Use CGAL with GMPXX: use C++ classes of GNU MP instead of CGAL
-// wrappers
-CGAL_WITH_GMPXX:BOOL=ON
 
 //Path to a program.
 CMAKE_ADDR2LINE:FILEPATH=/usr/bin/addr2line
@@ -275,7 +242,7 @@ CMAKE_PROJECT_DESCRIPTION:STATIC=
 CMAKE_PROJECT_HOMEPAGE_URL:STATIC=
 
 //Value Computed by CMake
-CMAKE_PROJECT_NAME:STATIC=CGAL-5.6.1
+CMAKE_PROJECT_NAME:STATIC=CGAL
 
 //Path to a program.
 CMAKE_RANLIB:FILEPATH=/usr/bin/ranlib
@@ -342,70 +309,32 @@ CMAKE_TAPI:FILEPATH=CMAKE_TAPI-NOTFOUND
 // Studio IDE projects all commands are done without /nologo.
 CMAKE_VERBOSE_MAKEFILE:BOOL=FALSE
 
-//The directory containing the GMPXX include files
-GMPXX_INCLUDE_DIR:PATH=/usr/include
-
-//Path to the GMPXX library
-GMPXX_LIBRARIES:FILEPATH=/usr/lib/x86_64-linux-gnu/libgmpxx.so
-
-//The directory containing the GMP header files
-GMP_INCLUDE_DIR:PATH=/usr/include/x86_64-linux-gnu
-
-//Path to the Debug GMP library
-GMP_LIBRARY_DEBUG:FILEPATH=/usr/lib/x86_64-linux-gnu/libgmp.so
-
-//Path to the Release GMP library
-GMP_LIBRARY_RELEASE:FILEPATH=/usr/lib/x86_64-linux-gnu/libgmp.so
-
-//The directory containing the MPFR header files
-MPFR_INCLUDE_DIR:PATH=/usr/include
-
-//Path to the MPFR library
-MPFR_LIBRARIES:FILEPATH=/usr/lib/x86_64-linux-gnu/libmpfr.so
-
-MPFR_LIBRARIES_DIR:FILEPATH=/usr/lib/x86_64-linux-gnu
-
 //Select demos
 WITH_demos:BOOL=OFF
 
 //Select examples
 WITH_examples:BOOL=OFF
 
-//The directory containing a CMake configuration file for boost_headers.
-boost_headers_DIR:PATH=/usr/lib/x86_64-linux-gnu/cmake/boost_headers-1.83.0
-
 
 ########################
 # INTERNAL cache entries
 ########################
 
-//ADVANCED property for variable: Boost_DEBUG
-Boost_DEBUG-ADVANCED:INTERNAL=1
-//ADVANCED property for variable: Boost_DIR
-Boost_DIR-ADVANCED:INTERNAL=1
 CGAL_3RD_PARTY_DEFINITIONS:INTERNAL=
 CGAL_3RD_PARTY_INCLUDE_DIRS:INTERNAL=
 CGAL_3RD_PARTY_LIBRARIES:INTERNAL=
 CGAL_3RD_PARTY_LIBRARIES_DIRS:INTERNAL=
-//ADVANCED property for variable: CGAL_Boost_USE_STATIC_LIBS
-CGAL_Boost_USE_STATIC_LIBS-ADVANCED:INTERNAL=1
-//STRINGS property for variable: CGAL_CMAKE_EXACT_NT_BACKEND
-CGAL_CMAKE_EXACT_NT_BACKEND-STRINGS:INTERNAL=GMP_BACKEND;GMPXX_BACKEND;BOOST_GMP_BACKEND;BOOST_BACKEND;LEDA_BACKEND;MP_FLOAT_BACKEND;Default
 //Directory containing the Core package
 CGAL_CORE_PACKAGE_DIR:INTERNAL=/home/dimitris/Project1/CGAL-5.6.1
 //Variable hidden from user
 CGAL_ESSENTIAL_3RD_PARTY_LIBRARIES:INTERNAL=GMP;MPFR
-CGAL_EXECUTABLE_TARGETS:INTERNAL=test;firstp;firstp
+CGAL_EXECUTABLE_TARGETS:INTERNAL=
 //Directory containing the GraphicsView package
 CGAL_GRAPHICSVIEW_PACKAGE_DIR:INTERNAL=/home/dimitris/Project1/CGAL-5.6.1
 //Directory containing the Installation package
 CGAL_INSTALLATION_PACKAGE_DIR:INTERNAL=/home/dimitris/Project1/CGAL-5.6.1
 //Directory containing the Maintenance package
 CGAL_MAINTENANCE_PACKAGE_DIR:INTERNAL=/home/dimitris/Project1/CGAL-5.6.1
-//CGAL library is configured to use GMP
-CGAL_USE_GMP:INTERNAL=TRUE
-//CGAL library is configured to use MPFR
-CGAL_USE_MPFR:INTERNAL=TRUE
 //ADVANCED property for variable: CMAKE_ADDR2LINE
 CMAKE_ADDR2LINE-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_AR
@@ -484,8 +413,6 @@ CMAKE_GENERATOR_INSTANCE:INTERNAL=
 CMAKE_GENERATOR_PLATFORM:INTERNAL=
 //Name of generator toolset.
 CMAKE_GENERATOR_TOOLSET:INTERNAL=
-//Test CMAKE_HAVE_LIBC_PTHREAD
-CMAKE_HAVE_LIBC_PTHREAD:INTERNAL=1
 //Source directory with the top level CMakeLists.txt file for this
 // project
 CMAKE_HOME_DIRECTORY:INTERNAL=/home/dimitris/Project1/CGAL-5.6.1
@@ -585,14 +512,6 @@ CMAKE_TAPI-ADVANCED:INTERNAL=1
 CMAKE_UNAME:INTERNAL=/usr/bin/uname
 //ADVANCED property for variable: CMAKE_VERBOSE_MAKEFILE
 CMAKE_VERBOSE_MAKEFILE-ADVANCED:INTERNAL=1
-//Details about finding Boost
-FIND_PACKAGE_MESSAGE_DETAILS_Boost:INTERNAL=[/usr/lib/x86_64-linux-gnu/cmake/Boost-1.83.0/BoostConfig.cmake][c ][v1.83.0()]
-//Details about finding GMP
-FIND_PACKAGE_MESSAGE_DETAILS_GMP:INTERNAL=[/usr/lib/x86_64-linux-gnu/libgmp.so][/usr/include/x86_64-linux-gnu][v()]
-//Details about finding MPFR
-FIND_PACKAGE_MESSAGE_DETAILS_MPFR:INTERNAL=[/usr/lib/x86_64-linux-gnu/libmpfr.so][/usr/include][v()]
-//Details about finding Threads
-FIND_PACKAGE_MESSAGE_DETAILS_Threads:INTERNAL=[TRUE][v()]
 //Result of TRY_COMPILE
 GCC_COMPILE_RES:INTERNAL=TRUE
 //Result of try_run()
@@ -601,6 +520,4 @@ GCC_RUN_RES:INTERNAL=0
 _CMAKE_LINKER_PUSHPOP_STATE_SUPPORTED:INTERNAL=TRUE
 //CMAKE_INSTALL_PREFIX during last run
 _GNUInstallDirs_LAST_CMAKE_INSTALL_PREFIX:INTERNAL=/usr/local
-//ADVANCED property for variable: boost_headers_DIR
-boost_headers_DIR-ADVANCED:INTERNAL=1
 

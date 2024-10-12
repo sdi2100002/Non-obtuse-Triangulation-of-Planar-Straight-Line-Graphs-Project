@@ -1,5 +1,0 @@
-/home/dimitris/Project1/CGAL-5.6.1/CMakeFiles/firstp.dir
-/home/dimitris/Project1/CGAL-5.6.1/CMakeFiles/ALL_CGAL_TARGETS.dir
-/home/dimitris/Project1/CGAL-5.6.1/CMakeFiles/cgal_check_build_system.dir
-/home/dimitris/Project1/CGAL-5.6.1/CMakeFiles/edit_cache.dir
-/home/dimitris/Project1/CGAL-5.6.1/CMakeFiles/rebuild_cache.dir

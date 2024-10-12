@@ -85,6 +85,51 @@ rebuild_cache:
 rebuild_cache/fast: rebuild_cache
 .PHONY : rebuild_cache/fast
 
+# Special rule for the target list_install_components
+list_install_components:
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --cyan "Available install components are: \"CGAL_Qt5\" \"Unspecified\""
+.PHONY : list_install_components
+
+# Special rule for the target list_install_components
+list_install_components/fast: list_install_components
+.PHONY : list_install_components/fast
+
+# Special rule for the target install
+install: preinstall
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --cyan "Install the project..."
+	/usr/bin/cmake -P cmake_install.cmake
+.PHONY : install
+
+# Special rule for the target install
+install/fast: preinstall/fast
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --cyan "Install the project..."
+	/usr/bin/cmake -P cmake_install.cmake
+.PHONY : install/fast
+
+# Special rule for the target install/local
+install/local: preinstall
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --cyan "Installing only the local directory..."
+	/usr/bin/cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P cmake_install.cmake
+.PHONY : install/local
+
+# Special rule for the target install/local
+install/local/fast: preinstall/fast
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --cyan "Installing only the local directory..."
+	/usr/bin/cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P cmake_install.cmake
+.PHONY : install/local/fast
+
+# Special rule for the target install/strip
+install/strip: preinstall
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --cyan "Installing the project stripped..."
+	/usr/bin/cmake -DCMAKE_INSTALL_DO_STRIP=1 -P cmake_install.cmake
+.PHONY : install/strip
+
+# Special rule for the target install/strip
+install/strip/fast: preinstall/fast
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --cyan "Installing the project stripped..."
+	/usr/bin/cmake -DCMAKE_INSTALL_DO_STRIP=1 -P cmake_install.cmake
+.PHONY : install/strip/fast
+
 # The main all target
 all: cmake_check_build_system
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/dimitris/Project1/CGAL-5.6.1/build/CMakeFiles /home/dimitris/Project1/CGAL-5.6.1/build//CMakeFiles/progress.marks
@@ -117,17 +162,17 @@ depend:
 .PHONY : depend
 
 #=============================================================================
-# Target rules for targets named firstp
+# Target rules for targets named install_FindCGAL
 
 # Build rule for target.
-firstp: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 firstp
-.PHONY : firstp
+install_FindCGAL: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 install_FindCGAL
+.PHONY : install_FindCGAL
 
 # fast build rule for target.
-firstp/fast:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/firstp.dir/build.make CMakeFiles/firstp.dir/build
-.PHONY : firstp/fast
+install_FindCGAL/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/install_FindCGAL.dir/build.make CMakeFiles/install_FindCGAL.dir/build
+.PHONY : install_FindCGAL/fast
 
 #=============================================================================
 # Target rules for targets named ALL_CGAL_TARGETS
@@ -143,41 +188,30 @@ ALL_CGAL_TARGETS/fast:
 .PHONY : ALL_CGAL_TARGETS/fast
 
 #=============================================================================
-# Target rules for targets named cgal_check_build_system
+# Target rules for targets named examples
 
 # Build rule for target.
-cgal_check_build_system: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 cgal_check_build_system
-.PHONY : cgal_check_build_system
+examples: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 examples
+.PHONY : examples
 
 # fast build rule for target.
-cgal_check_build_system/fast:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cgal_check_build_system.dir/build.make CMakeFiles/cgal_check_build_system.dir/build
-.PHONY : cgal_check_build_system/fast
+examples/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/examples.dir/build.make CMakeFiles/examples.dir/build
+.PHONY : examples/fast
 
-firstp.o: firstp.cpp.o
-.PHONY : firstp.o
+#=============================================================================
+# Target rules for targets named demos
 
-# target to build an object file
-firstp.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/firstp.dir/build.make CMakeFiles/firstp.dir/firstp.cpp.o
-.PHONY : firstp.cpp.o
+# Build rule for target.
+demos: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 demos
+.PHONY : demos
 
-firstp.i: firstp.cpp.i
-.PHONY : firstp.i
-
-# target to preprocess a source file
-firstp.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/firstp.dir/build.make CMakeFiles/firstp.dir/firstp.cpp.i
-.PHONY : firstp.cpp.i
-
-firstp.s: firstp.cpp.s
-.PHONY : firstp.s
-
-# target to generate assembly for a file
-firstp.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/firstp.dir/build.make CMakeFiles/firstp.dir/firstp.cpp.s
-.PHONY : firstp.cpp.s
+# fast build rule for target.
+demos/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/demos.dir/build.make CMakeFiles/demos.dir/build
+.PHONY : demos/fast
 
 # Help Target
 help:
@@ -186,13 +220,15 @@ help:
 	@echo "... clean"
 	@echo "... depend"
 	@echo "... edit_cache"
+	@echo "... install"
+	@echo "... install/local"
+	@echo "... install/strip"
+	@echo "... list_install_components"
 	@echo "... rebuild_cache"
 	@echo "... ALL_CGAL_TARGETS"
-	@echo "... cgal_check_build_system"
-	@echo "... firstp"
-	@echo "... firstp.o"
-	@echo "... firstp.i"
-	@echo "... firstp.s"
+	@echo "... demos"
+	@echo "... examples"
+	@echo "... install_FindCGAL"
 .PHONY : help
 
 

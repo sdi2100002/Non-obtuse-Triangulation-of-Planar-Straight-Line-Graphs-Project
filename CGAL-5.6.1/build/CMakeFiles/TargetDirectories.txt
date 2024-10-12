@@ -1,5 +1,10 @@
-/home/dimitris/Project1/CGAL-5.6.1/build/CMakeFiles/firstp.dir
+/home/dimitris/Project1/CGAL-5.6.1/build/CMakeFiles/install_FindCGAL.dir
 /home/dimitris/Project1/CGAL-5.6.1/build/CMakeFiles/ALL_CGAL_TARGETS.dir
-/home/dimitris/Project1/CGAL-5.6.1/build/CMakeFiles/cgal_check_build_system.dir
+/home/dimitris/Project1/CGAL-5.6.1/build/CMakeFiles/examples.dir
+/home/dimitris/Project1/CGAL-5.6.1/build/CMakeFiles/demos.dir
 /home/dimitris/Project1/CGAL-5.6.1/build/CMakeFiles/edit_cache.dir
 /home/dimitris/Project1/CGAL-5.6.1/build/CMakeFiles/rebuild_cache.dir
+/home/dimitris/Project1/CGAL-5.6.1/build/CMakeFiles/list_install_components.dir
+/home/dimitris/Project1/CGAL-5.6.1/build/CMakeFiles/install.dir
+/home/dimitris/Project1/CGAL-5.6.1/build/CMakeFiles/install/local.dir
+/home/dimitris/Project1/CGAL-5.6.1/build/CMakeFiles/install/strip.dir

@@ -1,45 +1,49 @@
-# Created by the script cgal_create_CMakeLists
-# This is the CMake script for compiling a set of CGAL applications.
-
+# CMake version requirement
 cmake_minimum_required(VERSION 3.1...3.23)
 
-project( test )
+# Project name and language
+project(test LANGUAGES CXX)
 
+# Find and include CGAL
+set(CGAL_DIR ../lib/CGAL-5.6.1/build)
 
-# CGAL and its components
-find_package( CGAL QUIET COMPONENTS  )
-
-if ( NOT CGAL_FOUND )
-
-  message(STATUS "This project requires the CGAL library, and will not be compiled.")
-  return()  
-
+# Find and include CGAL with Qt5 support
+find_package(CGAL QUIET COMPONENTS Qt5)
+if (NOT CGAL_FOUND)
+    message(STATUS "CGAL or CGAL Qt5 not found. Compilation will not proceed.")
+    return()
 endif()
 
-
-# Boost and its components
-find_package( Boost REQUIRED )
-
-if ( NOT Boost_FOUND )
-
-  message(STATUS "This project requires the Boost library, and will not be compiled.")
-
-  return()  
-
+find_package(Boost REQUIRED COMPONENTS system filesystem json)
+if (NOT Boost_FOUND)
+    message(STATUS "Boost not found. Compilation will not proceed.")
+    return()
 endif()
 
-# include for local directory
+# Specify the C++ standard
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
-# include for local package
+# Source files
+set(SOURCES
+    firstp.cpp
+    # ./utils/utils.cpp
+    # ./graphics/graphics.cpp
+    # ./utilsAlgo/utilsAlgo.cpp
+)
 
-
-# Creating entries for target: test
-# ############################
-
-add_executable( test  )
-
-add_to_cached_list( CGAL_EXECUTABLE_TARGETS test )
+# Create the executable
+add_executable(${PROJECT_NAME} ${SOURCES})
 
 # Link the executable to CGAL and third-party libraries
-target_link_libraries(test PRIVATE CGAL::CGAL )
+target_link_libraries(${PROJECT_NAME} PRIVATE CGAL::CGAL)
 
+find_package(Qt5 COMPONENTS Widgets OpenGL QUIET)
+# lINK Qt5 libraries only if CGAL_Gt5 is found
+if (Qt5_FOUND)
+    message(STATUS "Qt5 found, enabling CGAL Qt5 viewer.")
+    add_definitions(-DCGAL_USE_BASIC_VIEWER)    # Enable viewer functionality
+    target_link_libraries(${PROJECT_NAME} PRIVATE CGAL::CGAL_Qt5)
+else()
+    message(STATUS "Qt5 not found, CGAL Qt5 viewer will not be enabled.")
+endif()

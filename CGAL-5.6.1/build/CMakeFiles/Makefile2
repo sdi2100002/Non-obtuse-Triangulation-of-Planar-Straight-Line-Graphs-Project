@@ -63,7 +63,7 @@ CMAKE_BINARY_DIR = /home/dimitris/Project1/CGAL-5.6.1/build
 # Directory level rules for the build root directory
 
 # The main recursive "all" target.
-all: CMakeFiles/firstp.dir/all
+all:
 .PHONY : all
 
 # The main recursive "preinstall" target.
@@ -71,42 +71,44 @@ preinstall:
 .PHONY : preinstall
 
 # The main recursive "clean" target.
-clean: CMakeFiles/firstp.dir/clean
+clean: CMakeFiles/install_FindCGAL.dir/clean
 clean: CMakeFiles/ALL_CGAL_TARGETS.dir/clean
-clean: CMakeFiles/cgal_check_build_system.dir/clean
+clean: CMakeFiles/examples.dir/clean
+clean: CMakeFiles/demos.dir/clean
 .PHONY : clean
 
 #=============================================================================
-# Target rules for target CMakeFiles/firstp.dir
+# Target rules for target CMakeFiles/install_FindCGAL.dir
 
 # All Build rule for target.
-CMakeFiles/firstp.dir/all:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/firstp.dir/build.make CMakeFiles/firstp.dir/depend
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/firstp.dir/build.make CMakeFiles/firstp.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/dimitris/Project1/CGAL-5.6.1/build/CMakeFiles --progress-num=1,2 "Built target firstp"
-.PHONY : CMakeFiles/firstp.dir/all
+CMakeFiles/install_FindCGAL.dir/all:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/install_FindCGAL.dir/build.make CMakeFiles/install_FindCGAL.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/install_FindCGAL.dir/build.make CMakeFiles/install_FindCGAL.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/dimitris/Project1/CGAL-5.6.1/build/CMakeFiles --progress-num= "Built target install_FindCGAL"
+.PHONY : CMakeFiles/install_FindCGAL.dir/all
 
 # Build rule for subdir invocation for target.
-CMakeFiles/firstp.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/dimitris/Project1/CGAL-5.6.1/build/CMakeFiles 2
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/firstp.dir/all
+CMakeFiles/install_FindCGAL.dir/rule: cmake_check_build_system
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/dimitris/Project1/CGAL-5.6.1/build/CMakeFiles 0
-.PHONY : CMakeFiles/firstp.dir/rule
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/install_FindCGAL.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/dimitris/Project1/CGAL-5.6.1/build/CMakeFiles 0
+.PHONY : CMakeFiles/install_FindCGAL.dir/rule
 
 # Convenience name for target.
-firstp: CMakeFiles/firstp.dir/rule
-.PHONY : firstp
+install_FindCGAL: CMakeFiles/install_FindCGAL.dir/rule
+.PHONY : install_FindCGAL
 
 # clean rule for target.
-CMakeFiles/firstp.dir/clean:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/firstp.dir/build.make CMakeFiles/firstp.dir/clean
-.PHONY : CMakeFiles/firstp.dir/clean
+CMakeFiles/install_FindCGAL.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/install_FindCGAL.dir/build.make CMakeFiles/install_FindCGAL.dir/clean
+.PHONY : CMakeFiles/install_FindCGAL.dir/clean
 
 #=============================================================================
 # Target rules for target CMakeFiles/ALL_CGAL_TARGETS.dir
 
 # All Build rule for target.
-CMakeFiles/ALL_CGAL_TARGETS.dir/all: CMakeFiles/cgal_check_build_system.dir/all
+CMakeFiles/ALL_CGAL_TARGETS.dir/all: CMakeFiles/examples.dir/all
+CMakeFiles/ALL_CGAL_TARGETS.dir/all: CMakeFiles/demos.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/ALL_CGAL_TARGETS.dir/build.make CMakeFiles/ALL_CGAL_TARGETS.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/ALL_CGAL_TARGETS.dir/build.make CMakeFiles/ALL_CGAL_TARGETS.dir/build
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/dimitris/Project1/CGAL-5.6.1/build/CMakeFiles --progress-num= "Built target ALL_CGAL_TARGETS"
@@ -129,30 +131,56 @@ CMakeFiles/ALL_CGAL_TARGETS.dir/clean:
 .PHONY : CMakeFiles/ALL_CGAL_TARGETS.dir/clean
 
 #=============================================================================
-# Target rules for target CMakeFiles/cgal_check_build_system.dir
+# Target rules for target CMakeFiles/examples.dir
 
 # All Build rule for target.
-CMakeFiles/cgal_check_build_system.dir/all:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cgal_check_build_system.dir/build.make CMakeFiles/cgal_check_build_system.dir/depend
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cgal_check_build_system.dir/build.make CMakeFiles/cgal_check_build_system.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/dimitris/Project1/CGAL-5.6.1/build/CMakeFiles --progress-num= "Built target cgal_check_build_system"
-.PHONY : CMakeFiles/cgal_check_build_system.dir/all
+CMakeFiles/examples.dir/all:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/examples.dir/build.make CMakeFiles/examples.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/examples.dir/build.make CMakeFiles/examples.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/dimitris/Project1/CGAL-5.6.1/build/CMakeFiles --progress-num= "Built target examples"
+.PHONY : CMakeFiles/examples.dir/all
 
 # Build rule for subdir invocation for target.
-CMakeFiles/cgal_check_build_system.dir/rule: cmake_check_build_system
+CMakeFiles/examples.dir/rule: cmake_check_build_system
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/dimitris/Project1/CGAL-5.6.1/build/CMakeFiles 0
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/cgal_check_build_system.dir/all
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/examples.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/dimitris/Project1/CGAL-5.6.1/build/CMakeFiles 0
-.PHONY : CMakeFiles/cgal_check_build_system.dir/rule
+.PHONY : CMakeFiles/examples.dir/rule
 
 # Convenience name for target.
-cgal_check_build_system: CMakeFiles/cgal_check_build_system.dir/rule
-.PHONY : cgal_check_build_system
+examples: CMakeFiles/examples.dir/rule
+.PHONY : examples
 
 # clean rule for target.
-CMakeFiles/cgal_check_build_system.dir/clean:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cgal_check_build_system.dir/build.make CMakeFiles/cgal_check_build_system.dir/clean
-.PHONY : CMakeFiles/cgal_check_build_system.dir/clean
+CMakeFiles/examples.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/examples.dir/build.make CMakeFiles/examples.dir/clean
+.PHONY : CMakeFiles/examples.dir/clean
+
+#=============================================================================
+# Target rules for target CMakeFiles/demos.dir
+
+# All Build rule for target.
+CMakeFiles/demos.dir/all:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/demos.dir/build.make CMakeFiles/demos.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/demos.dir/build.make CMakeFiles/demos.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/dimitris/Project1/CGAL-5.6.1/build/CMakeFiles --progress-num= "Built target demos"
+.PHONY : CMakeFiles/demos.dir/all
+
+# Build rule for subdir invocation for target.
+CMakeFiles/demos.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/dimitris/Project1/CGAL-5.6.1/build/CMakeFiles 0
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/demos.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/dimitris/Project1/CGAL-5.6.1/build/CMakeFiles 0
+.PHONY : CMakeFiles/demos.dir/rule
+
+# Convenience name for target.
+demos: CMakeFiles/demos.dir/rule
+.PHONY : demos
+
+# clean rule for target.
+CMakeFiles/demos.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/demos.dir/build.make CMakeFiles/demos.dir/clean
+.PHONY : CMakeFiles/demos.dir/clean
 
 #=============================================================================
 # Special targets to cleanup operation of make.
