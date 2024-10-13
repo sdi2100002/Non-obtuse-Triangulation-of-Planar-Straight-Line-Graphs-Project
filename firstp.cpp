@@ -127,5 +127,5 @@ int main(int argc, char *argv[]) {
     cdtProcessor.processTriangulation();
 
     return app.exec(); // Ensure the app is executed at the end
-    //return 0; // Ensure the app is executed at the end
+    
 }

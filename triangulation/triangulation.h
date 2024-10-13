@@ -31,6 +31,10 @@ namespace Triangulation {
 
         // Συνάρτηση για την οπτικοποίηση της τριγωνοποίησης
         void visualizeTriangulation(const CDT& cdt);
+
+        // Μethods for checking obtuse triangles
+        double squaredDistance(const Point& p1, const Point& p2);
+        bool isObtuseTriangle(const Point& p1, const Point& p2, const Point& p3);
     };
 }
 
