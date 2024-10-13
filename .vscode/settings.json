@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "fstream": "cpp",
+        "*.ipp": "cpp",
+        "string": "cpp",
+        "format": "cpp"
+    }
+}

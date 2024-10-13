@@ -1,110 +1,103 @@
 #include <iostream>
 #include <fstream>
-//#include "json/single_include/nlohmann/json.hpp" // Include the JSON library
-#include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
-#include <CGAL/Constrained_Delaunay_triangulation_2.h>
-#include <CGAL/IO/io.h>
-#include <CGAL/Constrained_triangulation_plus_2.h>
-#include <CGAL/draw_triangulation_2.h>
-#include <cmath>
+#include <sstream>
 #include <vector>
-#include <cassert>
+#include <string>
 #include <boost/json/src.hpp>
-
-
-// #include <CGAL/draw_polygon_2.h>  // Include CGAL's drawing functions
-// #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
-// #include <CGAL/Polygon_2.h>
-// #include <CGAL/Constrained_Delaunay_triangulation_2.h>
+#include <QApplication>  // Include QApplication
+#include "graphics/graphics.h"
 
 using namespace boost::json;
-using namespace std;
 
-int main() {
-    object obj = {{"key", "value"}};
-    cout << obj << endl;
-    return 0;
+int main(int argc, char *argv[]) { // Accept command-line arguments
+    // Create the QApplication instance
+    QApplication app(argc, argv); // This must be the first GUI-related object created
+
+    // Open the JSON file
+    std::ifstream file("../input.json");
+    if(!file.is_open()){
+        std::cerr << "Could not open the file!" << std::endl;
+        return 1;
+    }
+
+    // Read the entire file into a string
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    std::string input = buffer.str();
+
+    // Parse the JSON
+    value parsed_json = parse(input);
+
+    // Get the object from the parsed JSON
+    object obj = parsed_json.as_object();
+
+    // Retrieve fields from the object
+    std::string instance_uid = obj["instance_uid"].as_string().c_str(); // Use std::string
+    int num_points = obj["num_points"].as_int64();
+
+    // Retrieve points_x and points_y lists
+    std::vector<int> points_x, points_y; // Use std::vector
+    for (const auto& x : obj["points_x"].as_array()) {
+        points_x.push_back(x.as_int64());
+    }
+    for (const auto& y : obj["points_y"].as_array()) {
+        points_y.push_back(y.as_int64());
+    }
+
+    // Retrieve the region_boundary
+    std::vector<int> region_boundary; // Use std::vector
+    for (const auto& boundary_point : obj["region_boundary"].as_array()) {
+        region_boundary.push_back(boundary_point.as_int64());
+    }
+
+    // Retrieve num_constraints
+    int num_constraints = obj["num_constraints"].as_int64();
+
+    // Retrieve additional_constraints
+    std::vector<std::pair<int, int>> additional_constraints; // Use std::vector and std::pair
+    for (const auto& constraint : obj["additional_constraints"].as_array()) {
+        auto constraint_pair = constraint.as_array();
+        additional_constraints.emplace_back(constraint_pair[0].as_int64(), constraint_pair[1].as_int64());
+    }
+
+    // Display the data
+    std::cout << "Instance UID: " << instance_uid << std::endl; // Use std::cout
+    std::cout << "Number of points: " << num_points << std::endl;
+
+    std::cout << "Points X: ";
+    for (const auto& x : points_x) {
+        std::cout << x << " ";
+    }
+    std::cout << std::endl;
+
+    std::cout << "Points Y: ";
+    for (const auto& y : points_y) {
+        std::cout << y << " "; 
+    }
+    std::cout << std::endl;
+
+    std::cout << "Region Boundary: ";
+    for (const auto& boundary_point : region_boundary) {
+        std::cout << boundary_point << " ";
+    }
+    std::cout << std::endl;
+
+    std::cout << "Number of constraints: " << num_constraints << std::endl;
+
+    std::cout << "Additional Constraints: ";
+    for (const auto& constraint : additional_constraints) {
+        std::cout << "[" << constraint.first << ", " << constraint.second << "] ";
+    }
+    std::cout << std::endl;
+
+    // Create a vector of pairs for the points
+    std::vector<std::pair<double, double>> points;
+    for (size_t i = 0; i < points_x.size(); ++i) {
+        points.emplace_back(static_cast<double>(points_x[i]), static_cast<double>(points_y[i]));
+    }
+
+    // Call the visualization function
+    visualizePoints(points);
+
+    return 0; // Ensure the app is executed at the end
 }
-
-// struct CDT {
-//     std::string instance_uid;
-//     int num_points;
-//     std::vector<int> points_x;
-//     std::vector<int> points_y;
-//     std::vector<int> region_boundary;
-//     int num_constraints;
-//     std::vector<std::vector<int>> additional_constraints;
-// };
-
-// // Function to load the JSON data into a CDT struct
-// void load_json_to_cdt(const std::string& file_name, CDT& cdt) {
-//     std::ifstream input_file(file_name);
-    
-//     if (!input_file.is_open()) {
-//         std::cerr << "Could not open the file!" << std::endl;
-//         return;
-//     }
-    
-//     // Parse the JSON file
-//     boost::json::value j;
-//     input_file >> j;
-    
-//     // Extract data into CDT struct
-//     cdt.instance_uid = j["instance_uid"];
-//     cdt.num_points = j["num_points"];
-//     cdt.points_x = j["points_x"].get<std::vector<int>>();
-//     cdt.points_y = j["points_y"].get<std::vector<int>>();
-//     cdt.region_boundary = j["region_boundary"].get<std::vector<int>>();
-//     cdt.num_constraints = j["num_constraints"];
-//     cdt.additional_constraints = j["additional_constraints"].get<std::vector<std::vector<int>>>();
-// }
-
-// int main() {
-//     CDT cdt;
-
-//     // Load the JSON file into the CDT struct
-//     load_json_to_cdt("input.json", cdt);
-
-//     // Output some of the loaded data to check
-//     std::cout << "Instance UID: " << cdt.instance_uid << std::endl;
-//     std::cout << "Number of Points: " << cdt.num_points << std::endl;
-//     std::cout << "First X Point: " << cdt.points_x[0] << std::endl;
-//     std::cout << "First Y Point: " << cdt.points_y[0] << std::endl;
-
-//     //CGAL::draw(cdt);
-
-//     return 0;
-// }
-
-
-
-
-
-
-// Define the kernel and the types used in the triangulation
-// typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
-// typedef CGAL::Polygon_2<K> Polygon;
-// typedef CGAL::Constrained_Delaunay_triangulation_2<K> CDT;
-
-// int main() {
-//     CDT cdt;
-
-//     // Load the JSON file into the CDT struct (previous function)
-//     load_json_to_cdt("input.json", cdt);
-
-//     // Here, you would typically add vertices and constraints to the CDT
-//     for (size_t i = 0; i < cdt.num_points; ++i) {
-//         cdt.insert(Point_2(cdt.points_x[i], cdt.points_y[i]));
-//     }
-
-//     // Add constraints (edges) based on your region_boundary and additional_constraints
-//     for (const auto& constraint : cdt.additional_constraints) {
-//         cdt.insert_constraint(cdt.points_x[constraint[0]], cdt.points_y[constraint[0]],
-//                               cdt.points_x[constraint[1]], cdt.points_y[constraint[1]]);
-//     }
-
-//     // Draw the CDT
-//     CGAL::draw(cdt);  // Call CGAL's draw function
-
-//     return 0;
-// }
