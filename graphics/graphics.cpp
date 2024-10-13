@@ -3,9 +3,7 @@
 #include <QChartView>
 #include <QScatterSeries>
 #include <QValueAxis>
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QJsonArray>
+#include <QLineSeries>
 #include <QFile>
 #include <boost/json.hpp>
 #include <vector>
@@ -13,57 +11,42 @@
 #include "graphics.h"
 
 using namespace QtCharts;
-using namespace boost::json; // Use Boost JSON namespace
+using namespace boost::json;
 
-// Function to read points from JSON file
-std::vector<std::pair<double, double>> readPointsFromJson(const std::string& filename) {
-    std::vector<std::pair<double, double>> points;
-
-    // Open the JSON file
-    QFile file(QString::fromStdString(filename));
-    if (!file.open(QIODevice::ReadOnly)) {
-        std::cerr << "Could not open the file: " << filename << std::endl;
-        return points; // Return empty vector on error
-    }
-
-    // Read the file into a JSON document
-    QByteArray jsonData = file.readAll();
-    file.close();
-
-    // Parse JSON using Boost.JSON
-    try {
-        value json_value = parse(std::string(jsonData.constData()));
-        const auto& points_array = json_value.as_object()["points"].as_array();
-
-        // Read points from JSON
-        for (const auto& item : points_array) {
-            const auto& obj = item.as_object();
-            double x = obj.at("x").as_double();
-            double y = obj.at("y").as_double();
-            points.emplace_back(x, y);
-        }
-    } catch (const std::exception& e) {
-        std::cerr << "Error parsing JSON: " << e.what() << std::endl;
-    }
-
-    return points;
-}
-
-// Function to visualize points in a Qt window
-void visualizePoints(const std::vector<std::pair<double, double>>& points) {
+// Function to visualize points and constraints in a Qt window
+void visualizePoints(const std::vector<std::pair<double, double>>& points, const std::vector<std::pair<int, int>>& constraints) {
     // Create a main window
     QMainWindow mainWindow;
 
     // Create a scatter series to hold the points
     QScatterSeries* series = new QScatterSeries();
+    series->setMarkerSize(10); // Adjust the marker size for better visibility
     for (const auto& point : points) {
         series->append(point.first, point.second);
+    }
+
+    // Create a line series for the constraints
+    QLineSeries* lineSeries = new QLineSeries();
+    
+    // Draw lines for each constraint
+    for (const auto& constraint : constraints) {
+        int point1_idx = constraint.first;
+        int point2_idx = constraint.second;
+
+        // Ensure the indices are valid
+        if (point1_idx < points.size() && point2_idx < points.size()) {
+            lineSeries->append(points[point1_idx].first, points[point1_idx].second);
+            lineSeries->append(points[point2_idx].first, points[point2_idx].second);
+            lineSeries->append(QPointF(points[point1_idx].first, points[point1_idx].second)); // Close the line segment
+            lineSeries->append(QPointF(points[point2_idx].first, points[point2_idx].second)); // Close the line segment
+        }
     }
 
     // Create a chart and add the series
     QChart* chart = new QChart();
     chart->addSeries(series);
-    chart->setTitle("Point Visualization");
+    chart->addSeries(lineSeries); // Add the constraints as a separate series
+    chart->setTitle("Point and Constraint Visualization");
     chart->createDefaultAxes();
 
     // Set the axes titles
@@ -79,7 +62,8 @@ void visualizePoints(const std::vector<std::pair<double, double>>& points) {
     chart->addAxis(axisY, Qt::AlignLeft);
     series->attachAxis(axisX);
     series->attachAxis(axisY);
-
+    lineSeries->attachAxis(axisX);
+    lineSeries->attachAxis(axisY);
 
     // Create a chart view to display the chart
     QChartView* chartView = new QChartView(chart);
@@ -91,7 +75,6 @@ void visualizePoints(const std::vector<std::pair<double, double>>& points) {
     // Start the Qt application event loop
     QApplication::exec();
 }
-
 
 
 
