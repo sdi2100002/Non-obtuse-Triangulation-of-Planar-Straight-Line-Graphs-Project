@@ -35,6 +35,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 # Source files
 set(SOURCES
     firstp.cpp
+    ./triangulation/triangulation.cpp
     # ./utils/utils.cpp
     ./graphics/graphics.cpp
     # ./utilsAlgo/utilsAlgo.cpp

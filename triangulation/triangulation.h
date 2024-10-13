@@ -1,0 +1,37 @@
+#ifndef TRIANGULATION_H
+#define TRIANGULATION_H
+
+#include <vector>
+#include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
+#include <CGAL/Constrained_Delaunay_triangulation_2.h>
+#include <CGAL/Triangulation_vertex_base_with_info_2.h>
+
+// CGAL typedefs
+typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
+typedef CGAL::Triangulation_vertex_base_with_info_2<std::size_t, K> Vb;
+typedef CGAL::Constrained_triangulation_face_base_2<K> Fb;
+typedef CGAL::Triangulation_data_structure_2<Vb, Fb> Tds;
+typedef CGAL::Constrained_Delaunay_triangulation_2<K, Tds> CDT;
+typedef CDT::Point Point;
+
+namespace Triangulation {
+
+    // Κλάση για την τριγωνοποίηση
+    class CDTProcessor {
+    public:
+        CDTProcessor(const std::vector<std::pair<double, double>>& points, 
+                     const std::vector<std::pair<int, int>>& constraints);
+        
+        // Συνάρτηση για την επεξεργασία της τριγωνοποίησης
+        void processTriangulation();
+
+    private:
+        std::vector<std::pair<double, double>> points_;
+        std::vector<std::pair<int, int>> constraints_;
+
+        // Συνάρτηση για την οπτικοποίηση της τριγωνοποίησης
+        void visualizeTriangulation(const CDT& cdt);
+    };
+}
+
+#endif // TRIANGULATION_H

@@ -6,6 +6,7 @@
 #include <boost/json/src.hpp>
 #include <QApplication>
 #include "graphics/graphics.h"
+#include "triangulation/triangulation.h"
 
 using namespace boost::json;
 
@@ -122,6 +123,9 @@ int main(int argc, char *argv[]) {
 
     // Call the visualization function for points and constraints
     visualizePoints(points, additional_constraints);
+    Triangulation::CDTProcessor cdtProcessor(points, additional_constraints);
+    cdtProcessor.processTriangulation();
 
-    return 0; // Ensure the app is executed at the end
+    return app.exec(); // Ensure the app is executed at the end
+    //return 0; // Ensure the app is executed at the end
 }
