@@ -3,6 +3,7 @@
         "fstream": "cpp",
         "*.ipp": "cpp",
         "string": "cpp",
-        "format": "cpp"
+        "format": "cpp",
+        "ostream": "cpp"
     }
 }
