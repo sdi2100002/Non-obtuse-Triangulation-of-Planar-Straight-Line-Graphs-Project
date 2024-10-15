@@ -45,17 +45,17 @@ namespace Triangulation {
 
     // Συνάρτηση για την επεξεργασία της τριγωνοποίησης
     void CDTProcessor::processTriangulation() {
-        // Δημιουργία CDT αντικειμένου
+        // Δημιουργία CDT αντικειμένου (αρχικά Delaunay τριγωνοποίηση)
         CDT cdt;
 
-        // Εισαγωγή σημείων στην τριγωνοποίηση με το index ως πληροφορία
+        // Εισαγωγή σημείων στην τριγωνοποίηση (δημιουργία καθαρής Delaunay τριγωνοποίησης)
         std::vector<CDT::Vertex_handle> vertices;
         for (size_t i = 0; i < points_.size(); ++i) {
             vertices.push_back(cdt.insert(Point(points_[i].first, points_[i].second)));
             vertices.back()->info() = i;
         }
 
-        // Προσθήκη περιορισμών
+        // Προσθήκη περιορισμένων ακμών (constrained edges)
         for (const auto& constraint : constraints_) {
             cdt.insert_constraint(vertices[constraint.first], vertices[constraint.second]);
         }
@@ -64,35 +64,51 @@ namespace Triangulation {
         int obtuse_before = countObtuseTriangles(cdt);
         std::cout << "Αμβλυγώνια τρίγωνα πριν την επεξεργασία: " << obtuse_before << std::endl;
         
-        bool hasObtuse;
+        
         bool flipped;
-        int max_iter=1050000;
+        int max_iter=100000;
         int iterationss=0;
-        do {
-            hasObtuse = false;
-            flipped = tryEdgeFlipping(cdt);  // Πρώτη προσπάθεια με flip των ακμών
+        int strategy=0; // 0:μέσο μεγαλύτερης ακμής , 1:περίκεντρο,2:εσωτερικό κυρτού πολυγώνου
+        
+        bool hasObtuse=true;
+        while(hasObtuse){
+            bool flipped=tryEdgeFlipping(cdt);
 
-            for (auto fit = cdt.finite_faces_begin(); fit != cdt.finite_faces_end(); ++fit) {
+            for(auto fit=cdt.finite_faces_begin();fit!=cdt.finite_faces_end();++fit){
                 auto p1 = fit->vertex(0)->point();
                 auto p2 = fit->vertex(1)->point();
                 auto p3 = fit->vertex(2)->point();
 
-                if (isObtuseTriangle(p1, p2, p3)) {
-                    hasObtuse = true;
+                if(isObtuseTriangle(p1,p2,p3)){
+                    hasObtuse=true;
 
-                    if (!flipped) {
-                        // Αν δεν έγινε περιστροφή, προσθέτουμε σημείο Steiner
-                        addSteinerPoint(cdt, p1, p2, p3);
+                    if(!flipped){
+                        //Εισαγωγη Steiner αναλογα με την τρέχουσα στρατηγική
+
+                        if(strategy == 0){     
+                            addSteinerPoint(cdt,p1,p2,p3);//Μεσο της μεγαλύτερης ακμής
+                        }
+                        else if (strategy == 1){
+                            addSteinerAtCircumcenter(cdt, p1, p2, p3);  //Περικεντρο
+                        }
+                        else if (strategy == 2){
+                            addSteinerInConvexPolygon(cdt, p1, p2, p3);  //Εσωτερικό κυρτού πολυγώνου
+                        }
                     }
+                    break;
+                }   
+            }
+            iterationss++;
+
+            if(iterationss==max_iter){
+                strategy++;
+                iterationss=0;
+                if(strategy > 2){
+                    std::cout << "Η διαδικασία ολοκληρώθηκε!" << std::endl;
                     break;
                 }
             }
-            iterationss++;
-            if(iterationss>=max_iter){
-                std::cout<<"max iter"<<std::endl;
-                break;
-            }
-        } while (hasObtuse);  // Επανάληψη μέχρι να μην υπάρχουν αμβλυγώνια τρίγωνα
+        }
         
         // Υπολογίζουμε τον αριθμό των αμβλυγώνιων τριγώνων πριν την επεξεργασία
         obtuse_before = countObtuseTriangles(cdt);
@@ -100,9 +116,9 @@ namespace Triangulation {
         
         // Οπτικοποίηση τριγωνοποίησης
         visualizeTriangulation(cdt);
-        // Υπολογίζουμε τον αριθμό των αμβλυγώνιων τριγώνων πριν την επεξεργασία
     }
 
+    //Συνάρτηση για edge Flipping
     bool CDTProcessor::tryEdgeFlipping(CDT& cdt) {
         bool flipped = false;
         for (auto eit = cdt.finite_edges_begin(); eit != cdt.finite_edges_end(); ++eit) {
@@ -163,6 +179,19 @@ namespace Triangulation {
         cdt.insert(midpoint);
     }
 
+    // Συνάρτηση για να προσθέσουμε σημείο Steiner στο περικεντρο του τριγώνου
+    void CDTProcessor::addSteinerAtCircumcenter(CDT& cdt, const Point& p1,const Point& p2, const Point& p3) {
+        // Υπολογισμός του περικέντρου
+        Point circumcenter = CGAL::circumcenter(p1, p2, p3);
+        cdt.insert(circumcenter);
+    }
+
+    // Συνάρτηση για να προσθέσουμε σημείο Steiner στο εσωτερικό κυρτού πολυγώνου
+    void CDTProcessor::addSteinerInConvexPolygon(CDT& cdt, const Point& p1,const Point& p2, const Point& p3) {
+        // Προσδιορισμός του κέντρου βάρους ως απλή λύση για το εσωτερικό του κυρτού πολυγώνου
+        Point centroid = CGAL::centroid(p1, p2, p3);
+        cdt.insert(centroid);
+    }
 
     // Συνάρτηση για την οπτικοποίηση της τριγωνοποίησης
     void CDTProcessor::visualizeTriangulation(const CDT& cdt) {
