@@ -25,6 +25,24 @@ namespace Triangulation {
         return (a2 + b2 < c2) || (a2 + c2 < b2) || (b2 + c2 < a2);
     }
 
+    // Συνάρτηση που μετράει τα αμβλυγώνια τρίγωνα
+    int CDTProcessor::countObtuseTriangles(const CDT& cdt) {
+        int obtuse_count = 0;
+
+        // Ελέγχουμε κάθε τρίγωνο αν είναι αμβλυγώνιο
+        for (auto fit = cdt.finite_faces_begin(); fit != cdt.finite_faces_end(); ++fit) {
+            auto p1 = fit->vertex(0)->point();
+            auto p2 = fit->vertex(1)->point();
+            auto p3 = fit->vertex(2)->point();
+
+            if (isObtuseTriangle(p1, p2, p3)) {
+                ++obtuse_count;
+            }
+        }
+
+        return obtuse_count;
+    }
+
     // Συνάρτηση για την επεξεργασία της τριγωνοποίησης
     void CDTProcessor::processTriangulation() {
         // Δημιουργία CDT αντικειμένου
@@ -42,29 +60,10 @@ namespace Triangulation {
             cdt.insert_constraint(vertices[constraint.first], vertices[constraint.second]);
         }
 
-        // bool hasObtuse;
-        // int iteration = 0;
-        // int maxIterations = 1000;  // Μέγιστος αριθμός επαναλήψεων
-        // do {
-        //     hasObtuse = false;
-        //     for (auto fit = cdt.finite_faces_begin(); fit != cdt.finite_faces_end(); ++fit) {
-        //         auto p1 = fit->vertex(0)->point();
-        //         auto p2 = fit->vertex(1)->point();
-        //         auto p3 = fit->vertex(2)->point();
-
-        //         if (isObtuseTriangle(p1, p2, p3)) {
-        //             hasObtuse = true;
-        //             addSteinerPoint(cdt, p1, p2, p3);
-        //             break;
-        //         }
-        //     }
-        //     iteration++;
-        //     if (iteration >= maxIterations) {
-        //         std::cerr << "Reached maximum iterations, stopping to avoid infinite loop." << std::endl;
-        //         break;  // Σταματάμε για να αποφύγουμε άπειρο βρόχο
-        //     }
-        // } while (hasObtuse);  // Επανάληψη μέχρι να μην υπάρχουν αμβλυγώνια τρίγωνα
-
+        // Υπολογίζουμε τον αριθμό των αμβλυγώνιων τριγώνων πριν την επεξεργασία
+        int obtuse_before = countObtuseTriangles(cdt);
+        std::cout << "Αμβλυγώνια τρίγωνα πριν την επεξεργασία: " << obtuse_before << std::endl;
+        
         bool hasObtuse;
         bool flipped;
         int max_iter=1050000;
@@ -94,9 +93,14 @@ namespace Triangulation {
                 break;
             }
         } while (hasObtuse);  // Επανάληψη μέχρι να μην υπάρχουν αμβλυγώνια τρίγωνα
-
+        
+        // Υπολογίζουμε τον αριθμό των αμβλυγώνιων τριγώνων πριν την επεξεργασία
+        obtuse_before = countObtuseTriangles(cdt);
+        std::cout << "Αμβλυγώνια τρίγωνα μετά την επεξεργασία: " << obtuse_before << std::endl;
+        
         // Οπτικοποίηση τριγωνοποίησης
         visualizeTriangulation(cdt);
+        // Υπολογίζουμε τον αριθμό των αμβλυγώνιων τριγώνων πριν την επεξεργασία
     }
 
     bool CDTProcessor::tryEdgeFlipping(CDT& cdt) {
