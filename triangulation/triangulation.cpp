@@ -66,7 +66,7 @@ namespace Triangulation {
         
         
         bool flipped;
-        int max_iter=100000;
+        int max_iter=10;
         int iterationss=0;
         int strategy=0; // 0:μέσο μεγαλύτερης ακμής , 1:περίκεντρο,2:εσωτερικό κυρτού πολυγώνου
         
