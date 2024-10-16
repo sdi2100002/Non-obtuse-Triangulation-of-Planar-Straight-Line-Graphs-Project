@@ -66,13 +66,14 @@ namespace Triangulation {
         
         
         bool flipped;
-        int max_iter=10;
+        int max_iter=10500;
         int iterationss=0;
         int strategy=0; // 0:μέσο μεγαλύτερης ακμής , 1:περίκεντρο,2:εσωτερικό κυρτού πολυγώνου
         
         bool hasObtuse=true;
         while(hasObtuse){
             bool flipped=tryEdgeFlipping(cdt);
+            std::cout<<flipped<<std::endl;
 
             for(auto fit=cdt.finite_faces_begin();fit!=cdt.finite_faces_end();++fit){
                 auto p1 = fit->vertex(0)->point();
@@ -118,9 +119,20 @@ namespace Triangulation {
         visualizeTriangulation(cdt);
     }
 
-    //Συνάρτηση για edge Flipping
+    bool CDTProcessor::isValidFlip(const Point& p1, const Point& p2, const Point& p3, const Point& p4) {
+        // Ελέγχουμε αν τα νέα τρίγωνα είναι obtuse
+        if (isObtuseTriangle(p1, p2, p4)) {
+            return false; // Το πρώτο τρίγωνο είναι obtuse
+        }
+        if (isObtuseTriangle(p2, p3, p4)) {
+            return false; // Το δεύτερο τρίγωνο είναι obtuse
+        }
+        return true; // Το flip είναι έγκυρο
+    }
+
     bool CDTProcessor::tryEdgeFlipping(CDT& cdt) {
         bool flipped = false;
+
         for (auto eit = cdt.finite_edges_begin(); eit != cdt.finite_edges_end(); ++eit) {
             auto face = eit->first;
             int index = eit->second;
@@ -144,17 +156,22 @@ namespace Triangulation {
 
             // Ελέγχουμε αν τα τρίγωνα είναι έγκυρα και αν μπορεί να γίνει flip
             if (face != opposite_face && isObtuseTriangle(p1, p2, p3)) {
-                // Περιστροφή (flip) της ακμής
-                try {
-                    cdt.flip(face, index);
-                    flipped = true;
-                } catch (const CGAL::Assertion_exception& e) {
-                    std::cerr << "Edge flip failed: " << e.what() << std::endl;
+                // Ελέγχουμε αν το flip είναι έγκυρο
+                if (isValidFlip(p1, p2, p3, p4)) {
+                    // Περιστροφή (flip) της ακμής
+                    try {
+                        cdt.flip(face, index);
+                        flipped = true;
+                    } catch (const CGAL::Assertion_exception& e) {
+                        std::cerr << "Edge flip failed: " << e.what() << std::endl;
+                    }
                 }
             }
         }
         return flipped;
     }
+
+
 
     // Συνάρτηση για να προσθέσεις σημείο Steiner στη μέση της μεγαλύτερης ακμής
     void CDTProcessor::addSteinerPoint(CDT& cdt, const Point& p1, const Point& p2, const Point& p3) {
