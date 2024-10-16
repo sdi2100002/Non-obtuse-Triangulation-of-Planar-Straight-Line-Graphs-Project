@@ -28,6 +28,7 @@ namespace Triangulation {
     private:
         std::vector<std::pair<double, double>> points_;
         std::vector<std::pair<int, int>> constraints_;
+        std::vector<int> boundaries_;
 
         // Συνάρτηση για την οπτικοποίηση της τριγωνοποίησης
         void visualizeTriangulation(const CDT& cdt);
@@ -35,7 +36,9 @@ namespace Triangulation {
         double squaredDistance(const Point& p1, const Point& p2);
 
         bool isObtuseTriangle(const Point& p1, const Point& p2, const Point& p3);
+        int countObtuseTriangles(const CDT& cdt);
 
+        bool isValidFlip(const Point& p1, const Point& p2, const Point& p3, const Point& p4);
         bool tryEdgeFlipping(CDT& cdt);
 
         void addSteinerPoint(CDT& cdt, const Point& p1, const Point& p2, const Point& p3);
@@ -43,10 +46,6 @@ namespace Triangulation {
         void addSteinerAtCircumcenter(CDT& cdt, const Point& p1,const Point& p2, const Point& p3);
         
         void addSteinerInConvexPolygon(CDT& cdt, const Point& p1,const Point& p2, const Point& p3);
-        
-        int countObtuseTriangles(const CDT& cdt);
-        bool isValidFlip(const Point& p1, const Point& p2, const Point& p3, const Point& p4);
-
     };
 }
 

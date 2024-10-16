@@ -73,7 +73,7 @@ namespace Triangulation {
         bool hasObtuse=true;
         while(hasObtuse){
             bool flipped=tryEdgeFlipping(cdt);
-            std::cout<<flipped<<std::endl;
+            //std::cout<<flipped<<std::endl;
 
             for(auto fit=cdt.finite_faces_begin();fit!=cdt.finite_faces_end();++fit){
                 auto p1 = fit->vertex(0)->point();
