@@ -43,80 +43,113 @@ namespace Triangulation {
         return obtuse_count;
     }
 
-    // Συνάρτηση για την επεξεργασία της τριγωνοποίησης
+    // Συνάρτηση για την επεξεργασία της τριγωνοποίησης με έλεγχο προσθήκης Steiner points
     void CDTProcessor::processTriangulation() {
-        // Δημιουργία CDT αντικειμένου (αρχικά Delaunay τριγωνοποίηση)
         CDT cdt;
 
-        // Εισαγωγή σημείων στην τριγωνοποίηση (δημιουργία καθαρής Delaunay τριγωνοποίησης)
+        // Εισαγωγή σημείων και ακμών στην τριγωνοποίηση
         std::vector<CDT::Vertex_handle> vertices;
         for (size_t i = 0; i < points_.size(); ++i) {
             vertices.push_back(cdt.insert(Point(points_[i].first, points_[i].second)));
             vertices.back()->info() = i;
         }
-
-        // Προσθήκη περιορισμένων ακμών (constrained edges)
         for (const auto& constraint : constraints_) {
             cdt.insert_constraint(vertices[constraint.first], vertices[constraint.second]);
         }
 
-        // Υπολογίζουμε τον αριθμό των αμβλυγώνιων τριγώνων πριν την επεξεργασία
         int obtuse_before = countObtuseTriangles(cdt);
         std::cout << "Αμβλυγώνια τρίγωνα πριν την επεξεργασία: " << obtuse_before << std::endl;
-        
-        
-        bool flipped;
-        int max_iter=10500;
-        int iterationss=0;
-        int strategy=0; // 0:μέσο μεγαλύτερης ακμής , 1:περίκεντρο,2:εσωτερικό κυρτού πολυγώνου
-        
-        bool hasObtuse=true;
-        while(hasObtuse){
-            bool flipped=tryEdgeFlipping(cdt);
-            //std::cout<<flipped<<std::endl;
 
-            for(auto fit=cdt.finite_faces_begin();fit!=cdt.finite_faces_end();++fit){
+        int max_iter = 10000;
+        int iterations = 0;
+        int strategy = 0;  // 0: μέσο μεγαλύτερης ακμής, 1: περικέντρο, 2: εσωτερικό κυρτού πολυγώνου
+        bool hasObtuse = true;
+
+        while (hasObtuse) {
+            hasObtuse = false;
+            
+
+            // Έλεγχος για αμβλυγώνια τρίγωνα
+            for (auto fit = cdt.finite_faces_begin(); fit != cdt.finite_faces_end(); ++fit) {
                 auto p1 = fit->vertex(0)->point();
                 auto p2 = fit->vertex(1)->point();
                 auto p3 = fit->vertex(2)->point();
 
-                if(isObtuseTriangle(p1,p2,p3)){
-                    hasObtuse=true;
+                if (isObtuseTriangle(p1, p2, p3)) {
+                    hasObtuse = true;
+                    bool flipped = tryEdgeFlipping(cdt,fit);
 
-                    if(!flipped){
-                        //Εισαγωγη Steiner αναλογα με την τρέχουσα στρατηγική
+                    if (!flipped) {
+                        Point steiner_point;
+                        
+                        // Προσομοίωση της προσθήκης Steiner ανάλογα με τη στρατηγική
+                        if (strategy == 0) {
+                            steiner_point = getMidpointOfLongestEdge(p1, p2, p3);
+                        } else if (strategy == 1) {
+                            steiner_point = CGAL::circumcenter(p1, p2, p3);  // Περικέντρο
+                        } else if (strategy == 2) {
+                            steiner_point = CGAL::centroid(p1, p2, p3);  // Εσωτερικό κυρτού πολυγώνου
+                        }
 
-                        if(strategy == 0){     
-                            addSteinerPoint(cdt,p1,p2,p3);//Μεσο της μεγαλύτερης ακμής
-                        }
-                        else if (strategy == 1){
-                            addSteinerAtCircumcenter(cdt, p1, p2, p3);  //Περικεντρο
-                        }
-                        else if (strategy == 2){
-                            addSteinerInConvexPolygon(cdt, p1, p2, p3);  //Εσωτερικό κυρτού πολυγώνου
+                        // Υπολογισμός προσωρινής επίδρασης της προσθήκης Steiner
+                        int obtuse_after_sim = simulateSteinerEffect(cdt, steiner_point);
+                        
+                        if (obtuse_after_sim < obtuse_before) {
+                            // Αν βελτιώνει την κατάσταση, προσθέτουμε το σημείο πραγματικά
+                            cdt.insert(steiner_point);
+                            obtuse_before = obtuse_after_sim;
+                            std::cout << "Προσθήκη Steiner point βελτίωσε την κατάσταση." << std::endl;
+                        } else {
+                            std::cout << "Προσθήκη Steiner point δεν βελτίωσε την κατάσταση." << std::endl;
                         }
                     }
                     break;
-                }   
+                }
             }
-            iterationss++;
 
-            if(iterationss==max_iter){
+            iterations++;
+            if (iterations == max_iter) {
                 strategy++;
-                iterationss=0;
-                if(strategy > 2){
+                iterations = 0;
+                if (strategy > 2) {
                     std::cout << "Η διαδικασία ολοκληρώθηκε!" << std::endl;
                     break;
                 }
             }
         }
-        
-        // Υπολογίζουμε τον αριθμό των αμβλυγώνιων τριγώνων πριν την επεξεργασία
+
         obtuse_before = countObtuseTriangles(cdt);
         std::cout << "Αμβλυγώνια τρίγωνα μετά την επεξεργασία: " << obtuse_before << std::endl;
-        
-        // Οπτικοποίηση τριγωνοποίησης
+
         visualizeTriangulation(cdt);
+    }
+
+
+    // Συνάρτηση για υπολογισμό της επίδρασης του Steiner point χωρίς να προστεθεί
+    int CDTProcessor::simulateSteinerEffect(CDT& cdt, const Point& steiner_point) {
+        // Προσωρινή αντιγραφή του CDT για να ελέγξουμε την επίδραση
+        CDT temp_cdt = cdt;
+
+        // Προσθήκη του Steiner point στον προσωρινό πίνακα
+        temp_cdt.insert(steiner_point);
+
+        // Υπολογισμός του αριθμού των αμβλυγώνιων τριγώνων μετά την προσθήκη
+        return countObtuseTriangles(temp_cdt);
+    }
+
+// Συνάρτηση για να πάρουμε το μέσο της μεγαλύτερης ακμής
+    Point CDTProcessor::getMidpointOfLongestEdge(const Point& p1, const Point& p2, const Point& p3) {
+        double a2 = squaredDistance(p2, p3);
+        double b2 = squaredDistance(p1, p3);
+        double c2 = squaredDistance(p1, p2);
+
+        if (a2 >= b2 && a2 >= c2) {
+            return CGAL::midpoint(p2, p3);  // Μεσο της μεγαλύτερης ακμής p2-p3
+        } else if (b2 >= a2 && b2 >= c2) {
+            return CGAL::midpoint(p1, p3);  // Μεσο της ακμής p1-p3
+        } else {
+            return CGAL::midpoint(p1, p2);  // Μεσο της ακμής p1-p2
+        }
     }
 
     bool CDTProcessor::isValidFlip(const Point& p1, const Point& p2, const Point& p3, const Point& p4) {
@@ -130,40 +163,38 @@ namespace Triangulation {
         return true; // Το flip είναι έγκυρο
     }
 
-    bool CDTProcessor::tryEdgeFlipping(CDT& cdt) {
+    bool CDTProcessor::tryEdgeFlipping(CDT& cdt, CDT::Face_handle face) {
         bool flipped = false;
 
-        for (auto eit = cdt.finite_edges_begin(); eit != cdt.finite_edges_end(); ++eit) {
-            auto face = eit->first;
-            int index = eit->second;
-
-            // Παίρνουμε το αντίθετο τρίγωνο για την ακμή
+        // Ελέγχουμε όλες τις ακμές του τριγώνου
+        for (int index = 0; index < 3; ++index) {
             CDT::Face_handle opposite_face = face->neighbor(index);
 
-            // Ελέγχουμε αν η ακμή είναι περιορισμένη (constrained)
-            if (cdt.is_constrained(*eit)) {
-                continue; // Αγνοούμε τις περιορισμένες ακμές
+            // Αγνοούμε τις περιορισμένες ακμές
+            if (cdt.is_constrained(CDT::Edge(face, index))) {
+                continue;
             }
 
-            // Ελέγχουμε αν η ακμή είναι εσωτερική (αν υπάρχει γειτονικό τρίγωνο)
+            // Ελέγχουμε αν υπάρχει γειτονικό τρίγωνο και αν η ακμή είναι εσωτερική
             if (cdt.is_infinite(face) || cdt.is_infinite(opposite_face)) continue;
 
-            // Παίρνουμε τις κορυφές των δύο τριγώνων
+            // Παίρνουμε τις κορυφές του τριγώνου και του γειτονικού
             auto p1 = face->vertex(cdt.ccw(index))->point();
             auto p2 = face->vertex(cdt.cw(index))->point();
             auto p3 = face->vertex(index)->point();
-            auto p4 = opposite_face->vertex(opposite_face->index(face))->point();
 
-            // Ελέγχουμε αν τα τρίγωνα είναι έγκυρα και αν μπορεί να γίνει flip
-            if (face != opposite_face && isObtuseTriangle(p1, p2, p3)) {
-                // Ελέγχουμε αν το flip είναι έγκυρο
-                if (isValidFlip(p1, p2, p3, p4)) {
-                    // Περιστροφή (flip) της ακμής
+            // Αν το τρίγωνο είναι αμβλυγώνιο, ελέγχουμε για flip
+            if (isObtuseTriangle(p1, p2, p3)) {
+                // Χρησιμοποιούμε τη συνάρτηση is_flippable της CDT για να ελέγξουμε αν το flip είναι δυνατό
+                bool isFlipable=cdt.is_flipable(face, index);
+                if (isFlipable) { // Η σωστή κλήση με 2 ορίσματα
                     try {
                         cdt.flip(face, index);
                         flipped = true;
+                        std::cout << "Flip επιτυχές!" << std::endl;
+                        break;
                     } catch (const CGAL::Assertion_exception& e) {
-                        std::cerr << "Edge flip failed: " << e.what() << std::endl;
+                        std::cerr << "Flip απέτυχε: " << e.what() << std::endl;
                     }
                 }
             }

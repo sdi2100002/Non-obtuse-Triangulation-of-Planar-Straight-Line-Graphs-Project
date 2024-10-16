@@ -39,13 +39,14 @@ namespace Triangulation {
         int countObtuseTriangles(const CDT& cdt);
 
         bool isValidFlip(const Point& p1, const Point& p2, const Point& p3, const Point& p4);
-        bool tryEdgeFlipping(CDT& cdt);
-
+        bool tryEdgeFlipping(CDT& cdt, CDT::Face_handle face);
         void addSteinerPoint(CDT& cdt, const Point& p1, const Point& p2, const Point& p3);
 
         void addSteinerAtCircumcenter(CDT& cdt, const Point& p1,const Point& p2, const Point& p3);
         
         void addSteinerInConvexPolygon(CDT& cdt, const Point& p1,const Point& p2, const Point& p3);
+        int simulateSteinerEffect(CDT& cdt, const Point& steiner_point);
+        Point getMidpointOfLongestEdge(const Point& p1, const Point& p2, const Point& p3);
     };
 }
 

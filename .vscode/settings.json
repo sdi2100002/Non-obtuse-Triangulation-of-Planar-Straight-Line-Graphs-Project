@@ -4,6 +4,7 @@
         "*.ipp": "cpp",
         "string": "cpp",
         "format": "cpp",
-        "ostream": "cpp"
+        "ostream": "cpp",
+        "iostream": "cpp"
     }
 }
