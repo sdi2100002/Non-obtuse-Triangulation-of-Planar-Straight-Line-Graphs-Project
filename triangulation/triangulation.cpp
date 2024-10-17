@@ -103,10 +103,13 @@ namespace Triangulation {
 
                         // Προσομοίωση της προσθήκης Steiner ανάλογα με τη στρατηγική
                         if (strategy == 0) {
+                            //std::cout<<"0"<<std::endl;
                             steiner_point = getMidpointOfLongestEdge(p1, p2, p3);
                         } else if (strategy == 1) {
+                            //std::cout<<"1"<<std::endl;
                             steiner_point = CGAL::circumcenter(p1, p2, p3);  // Περικέντρο
                         } else if (strategy == 2) {
+                            //std::cout<<"2"<<std::endl;
                             steiner_point = CGAL::centroid(p1, p2, p3);  // Εσωτερικό κυρτού πολυγώνου
                         }
 
@@ -116,7 +119,7 @@ namespace Triangulation {
                         if (obtuse_after_sim < obtuse_before) {// Αν βελτιώνει την κατάσταση, προσθέτουμε το σημείο πραγματικά
                             cdt.insert(steiner_point);
                             obtuse_before = obtuse_after_sim;
-                            //std::cout << "Προσθήκη Steiner point βελτίωσε την κατάσταση." << std::endl;
+                            std::cout << "Προσθήκη Steiner point βελτίωσε την κατάσταση." << std::endl;
                         }
                     }
                     break;  // Exit the loop after processing the first obtuse triangle found
