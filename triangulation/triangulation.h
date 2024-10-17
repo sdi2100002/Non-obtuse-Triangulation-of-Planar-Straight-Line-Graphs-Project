@@ -20,7 +20,8 @@ namespace Triangulation {
     class CDTProcessor {
     public:
         CDTProcessor(const std::vector<std::pair<double, double>>& points, 
-                     const std::vector<std::pair<int, int>>& constraints);
+                     const std::vector<std::pair<int, int>>& constraints,
+                     const std::vector<int>& region_boundary);
         
         // Συνάρτηση για την επεξεργασία της τριγωνοποίησης
         void processTriangulation();
@@ -28,24 +29,33 @@ namespace Triangulation {
     private:
         std::vector<std::pair<double, double>> points_;
         std::vector<std::pair<int, int>> constraints_;
-        std::vector<int> boundaries_;
+        std::vector<int> region_boundary_;
 
         // Συνάρτηση για την οπτικοποίηση της τριγωνοποίησης
         void visualizeTriangulation(const CDT& cdt);
 
+        bool isPointInPolygon(const std::pair<double, double>& pt, const std::vector<std::pair<double, double>>& polygon);
+       
+        bool isTriangleWithinBoundary(const CDT::Face_handle& face, const std::vector<int>& boundary);
+
         double squaredDistance(const Point& p1, const Point& p2);
 
         bool isObtuseTriangle(const Point& p1, const Point& p2, const Point& p3);
+        
         int countObtuseTriangles(const CDT& cdt);
 
         bool isValidFlip(const Point& p1, const Point& p2, const Point& p3, const Point& p4);
+        
         bool tryEdgeFlipping(CDT& cdt, CDT::Face_handle face);
+        
         void addSteinerPoint(CDT& cdt, const Point& p1, const Point& p2, const Point& p3);
 
         void addSteinerAtCircumcenter(CDT& cdt, const Point& p1,const Point& p2, const Point& p3);
         
         void addSteinerInConvexPolygon(CDT& cdt, const Point& p1,const Point& p2, const Point& p3);
+        
         int simulateSteinerEffect(CDT& cdt, const Point& steiner_point);
+
         Point getMidpointOfLongestEdge(const Point& p1, const Point& p2, const Point& p3);
     };
 }

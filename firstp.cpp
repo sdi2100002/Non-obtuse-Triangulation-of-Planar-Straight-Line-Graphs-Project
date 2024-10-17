@@ -115,6 +115,12 @@ int main(int argc, char *argv[]) {
         additional_constraints.emplace_back(constraint_pair[0].as_int64(), constraint_pair[1].as_int64());
     }
 
+    // Retrieve region_boundary
+    std::vector<int> region_boundary;
+    for (const auto& boundary : obj["region_boundary"].as_array()) {
+        region_boundary.push_back(boundary.as_int64());
+    }
+
     // Create a vector of pairs for the points
     std::vector<std::pair<double, double>> points;
     for (size_t i = 0; i < points_x.size(); ++i) {
@@ -123,9 +129,10 @@ int main(int argc, char *argv[]) {
 
     // Call the visualization function for points and constraints
     visualizePoints(points, additional_constraints);
-    Triangulation::CDTProcessor cdtProcessor(points, additional_constraints);
+
+    // Pass region_boundary into the CDTProcessor
+    Triangulation::CDTProcessor cdtProcessor(points, additional_constraints, region_boundary);
     cdtProcessor.processTriangulation();
 
     return app.exec(); // Ensure the app is executed at the end
-    
 }
