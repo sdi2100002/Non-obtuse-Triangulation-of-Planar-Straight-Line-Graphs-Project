@@ -34,8 +34,11 @@ namespace Triangulation {
         // Συνάρτηση για την οπτικοποίηση της τριγωνοποίησης
         void visualizeTriangulation(const CDT& cdt);
 
+        bool isPointOnSegment(const std::pair<double, double>& pt, const std::pair<double, double>& p1, const std::pair<double, double>& p2);
+
         bool isPointInPolygon(const std::pair<double, double>& pt, const std::vector<std::pair<double, double>>& polygon);
        
+
         bool isTriangleWithinBoundary(const CDT::Face_handle& face, const std::vector<int>& boundary);
 
         double squaredDistance(const Point& p1, const Point& p2);
@@ -57,6 +60,9 @@ namespace Triangulation {
         int simulateSteinerEffect(CDT& cdt, const Point& steiner_point);
 
         Point getMidpointOfLongestEdge(const Point& p1, const Point& p2, const Point& p3);
+
+
+    
     };
 }
 

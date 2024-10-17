@@ -3,6 +3,7 @@
 #include <cmath>
 #include <iostream>
 #include <CGAL/algorithm.h>
+#include <utility>
 
 namespace Triangulation {
 
@@ -83,10 +84,10 @@ namespace Triangulation {
             for (auto fit = cdt.finite_faces_begin(); fit != cdt.finite_faces_end(); ++fit) {
                 // Αγνοούμε τρίγωνα που βρίσκονται εκτός των ορίων
                 if (!isTriangleWithinBoundary(fit, region_boundary_)) {
-                    //std::cout << "Triangle is outside boundary." << std::endl;
+                    std::cout << "Triangle is outside boundary." << std::endl;
                     continue;  // Skip this triangle if it is outside the boundary
                 }
-                std::cout << "Triangle is inside the boundary" << std::endl;
+                //std::cout << "Triangle is inside the boundary" << std::endl;
 
                 auto p1 = fit->vertex(0)->point();
                 auto p2 = fit->vertex(1)->point();
@@ -136,7 +137,24 @@ namespace Triangulation {
         obtuse_before = countObtuseTriangles(cdt);
         std::cout << "Αμβλυγώνια τρίγωνα μετά την επεξεργασία: " << obtuse_before << std::endl;
 
+
         visualizeTriangulation(cdt);
+    }
+
+    // Συνάρτηση που ελέγχει αν το σημείο pt είναι πάνω στη γραμμή που ενώνεται από τα σημεία p1 και p2
+    bool CDTProcessor::isPointOnSegment(const std::pair<double, double>& pt, const std::pair<double, double>& p1, const std::pair<double, double>& p2) {
+        double crossProduct = (pt.second - p1.second) * (p2.first - p1.first) - (pt.first - p1.first) * (p2.second - p1.second);
+        if (std::abs(crossProduct) > 1e-10) {
+            return false; // Το σημείο δεν είναι στη γραμμή
+        }
+
+        // Ελέγχουμε αν το σημείο pt βρίσκεται εντός των ορίων της γραμμής
+        if (pt.first < std::min(p1.first, p2.first) || pt.first > std::max(p1.first, p2.first) ||
+            pt.second < std::min(p1.second, p2.second) || pt.second > std::max(p1.second, p2.second)) {
+            return false; // Το σημείο είναι εκτός των ορίων
+        }
+
+        return true; // Το σημείο είναι πάνω στη γραμμή
     }
 
     bool CDTProcessor::isPointInPolygon(const std::pair<double, double>& pt, const std::vector<std::pair<double, double>>& polygon) {
@@ -149,7 +167,17 @@ namespace Triangulation {
                 (polygon[j].second - polygon[i].second) + polygon[i].first)) {
                 inside = !inside;
             }
+            // Έλεγχος αν το σημείο βρίσκεται πάνω σε μια πλευρά του πολυγώνου
+            if (isPointOnSegment(pt, polygon[i], polygon[j])) {
+                //std::cout << "Το σημείο (" << pt.first << ", " << pt.second << ") είναι πάνω στο περίγραμμα του πολύγωνου." << std::endl;
+                return true; // Επιστρέφουμε true εφόσον το σημείο είναι στο περίγραμμα
+            }
         }
+        // Αν το σημείο δεν είναι μέσα στο πολύγωνο, εκτύπωσε τις συντεταγμένες του
+        if (!inside) {
+            std::cout << "Το σημείο (" << pt.first << ", " << pt.second << ") δεν είναι μέσα στο πολύγωνο." << std::endl;
+        }
+        // std::cout << "Το σημείο (" << pt.first << ", " << pt.second << ")  στο πολύγωνο." << std::endl;
         return inside;
     }
 
@@ -181,7 +209,7 @@ namespace Triangulation {
         return countObtuseTriangles(temp_cdt);
     }
 
-// Συνάρτηση για να πάρουμε το μέσο της μεγαλύτερης ακμής
+    // Συνάρτηση για να πάρουμε το μέσο της μεγαλύτερης ακμής
     Point CDTProcessor::getMidpointOfLongestEdge(const Point& p1, const Point& p2, const Point& p3) {
         double a2 = squaredDistance(p2, p3);
         double b2 = squaredDistance(p1, p3);
