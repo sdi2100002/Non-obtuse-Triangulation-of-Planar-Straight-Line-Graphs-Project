@@ -53,6 +53,7 @@ namespace Triangulation {
         return obtuse_count;
     }
 
+
     void CDTProcessor::processTriangulation() {
         CDT cdt;
 
@@ -73,10 +74,15 @@ namespace Triangulation {
 
         int max_iter = 10000;
         int iterations = 0;
+        int consecutive_no_improvement = 0;  // Counter to check how many iterations had no improvements
+        const int max_no_improvement = 10;    // Maximum number of iterations with no improvement before trying more aggressive strategies
+
         bool hasObtuse = true;
 
         while (hasObtuse && iterations < max_iter) {
             hasObtuse = false;
+            int best_obtuse_after_sim = obtuse_before; // Track best obtuse triangle count in this iteration
+            Point best_steiner_point;
 
             // Έλεγχος για αμβλυγώνια τρίγωνα
             for (auto fit = cdt.finite_faces_begin(); fit != cdt.finite_faces_end(); ++fit) {
@@ -96,10 +102,7 @@ namespace Triangulation {
                     bool flipped = tryEdgeFlipping(cdt, fit);
 
                     if (!flipped) {
-                        Point best_steiner_point;
-                        int best_obtuse_after_sim = obtuse_before;
-
-                        // Δοκιμή όλων των στρατηγικών
+                        // Δοκιμή όλων των στρατηγικών για το τρέχον τρίγωνο
                         for (int strategy = 0; strategy <= 4; ++strategy) {
                             Point steiner_point;
 
@@ -124,23 +127,25 @@ namespace Triangulation {
                                 best_steiner_point = steiner_point;
                             }
                         }
-
-                        // Εισαγωγή του καλύτερου Steiner point
-                        if (best_obtuse_after_sim < obtuse_before) {
-                            cdt.insert(best_steiner_point);
-                            obtuse_before = best_obtuse_after_sim;
-                            std::cout << "Προσθήκη Steiner point βελτίωσε την κατάσταση." << std::endl;
-                        }
                     }
-                    break;  // Exit the loop after processing the first obtuse triangle found
                 }
             }
 
-            if (countObtuseTriangles(cdt)>0){
-                hasObtuse=true;
+            // Εισαγωγή του καλύτερου Steiner point
+            if (best_obtuse_after_sim < obtuse_before) {
+                cdt.insert(best_steiner_point);
+                obtuse_before = best_obtuse_after_sim;
+                std::cout << "Προσθήκη Steiner point βελτίωσε την κατάσταση. Αμβλυγώνια τρίγωνα: " << obtuse_before << std::endl;
+                consecutive_no_improvement = 0; // Reset counter for no improvement
+            } else {
+                consecutive_no_improvement++;
+                //std::cout << "No improvement in this iteration. Consecutive no improvement: " << consecutive_no_improvement << std::endl;
             }
-            else {
-                break;
+
+            if (consecutive_no_improvement >= max_no_improvement) {
+                //std::cout << "No improvement after " << max_no_improvement << " iterations. Trying more aggressive strategies." << std::endl;
+                // Πιθανόν να προσπαθήσουμε κάτι πιο επιθετικό εδώ, όπως εισαγωγή πολλαπλών σημείων ή άλλες μεθόδους
+                consecutive_no_improvement = 0; // Reset after attempting an aggressive strategy
             }
 
             iterations++;
