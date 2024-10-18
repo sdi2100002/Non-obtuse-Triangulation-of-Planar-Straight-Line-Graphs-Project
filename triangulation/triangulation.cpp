@@ -144,7 +144,7 @@ namespace Triangulation {
 
             if (consecutive_no_improvement >= max_no_improvement) {
                 //std::cout << "No improvement after " << max_no_improvement << " iterations. Trying more aggressive strategies." << std::endl;
-                // Πιθανόν να προσπαθήσουμε κάτι πιο επιθετικό εδώ, όπως εισαγωγή πολλαπλών σημείων ή άλλες μεθόδους
+                // TODO :: Πιθανόν να προσπαθήσουμε κάτι πιο επιθετικό εδώ, όπως εισαγωγή πολλαπλών σημείων ή άλλες μεθόδους
                 consecutive_no_improvement = 0; // Reset after attempting an aggressive strategy
             }
 
