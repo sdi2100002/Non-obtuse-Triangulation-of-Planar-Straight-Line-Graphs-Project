@@ -53,7 +53,6 @@ namespace Triangulation {
         return obtuse_count;
     }
 
-
     void CDTProcessor::processTriangulation() {
         CDT cdt;
 
@@ -74,10 +73,9 @@ namespace Triangulation {
 
         int max_iter = 10000;
         int iterations = 0;
-        int strategy = 0;  // 0: μέσο μεγαλύτερης ακμής, 1: περικέντρο, 2: εσωτερικό κυρτού πολυγώνου
         bool hasObtuse = true;
 
-        while (hasObtuse) {
+        while (hasObtuse && iterations < max_iter) {
             hasObtuse = false;
 
             // Έλεγχος για αμβλυγώνια τρίγωνα
@@ -87,7 +85,6 @@ namespace Triangulation {
                     std::cout << "Triangle is outside boundary." << std::endl;
                     continue;  // Skip this triangle if it is outside the boundary
                 }
-                //std::cout << "Triangle is inside the boundary" << std::endl;
 
                 auto p1 = fit->vertex(0)->point();
                 auto p2 = fit->vertex(1)->point();
@@ -99,26 +96,39 @@ namespace Triangulation {
                     bool flipped = tryEdgeFlipping(cdt, fit);
 
                     if (!flipped) {
-                        Point steiner_point;
+                        Point best_steiner_point;
+                        int best_obtuse_after_sim = obtuse_before;
 
-                        // Προσομοίωση της προσθήκης Steiner ανάλογα με τη στρατηγική
-                        if (strategy == 0) {
-                            //std::cout<<"0"<<std::endl;
-                            steiner_point = getMidpointOfLongestEdge(p1, p2, p3);
-                        } else if (strategy == 1) {
-                            //std::cout<<"1"<<std::endl;
-                            steiner_point = CGAL::circumcenter(p1, p2, p3);  // Περικέντρο
-                        } else if (strategy == 2) {
-                            //std::cout<<"2"<<std::endl;
-                            steiner_point = CGAL::centroid(p1, p2, p3);  // Εσωτερικό κυρτού πολυγώνου
+                        // Δοκιμή όλων των στρατηγικών
+                        for (int strategy = 0; strategy <= 4; ++strategy) {
+                            Point steiner_point;
+
+                            if (strategy == 0) {
+                                steiner_point = getMidpointOfLongestEdge(p1, p2, p3);
+                            } else if (strategy == 1) {
+                                steiner_point = CGAL::centroid(p1, p2, p3);  // Εσωτερικό κυρτού πολυγώνου
+                            } else if (strategy == 2) {
+                                steiner_point = CGAL::circumcenter(p1, p2, p3);  // Περικέντρο
+                            } else if (strategy == 3) {
+                                steiner_point = calculate_incenter(p1, p2, p3);  // Εσωτερικό τριγώνου
+                            } else if (strategy == 4) {
+                                steiner_point = calculate_perpendicular_bisector_point(p1, p2, p3);  // Κάθετος διχοτόμος
+                            }
+
+                            // Υπολογισμός προσωρινής επίδρασης της προσθήκης Steiner point
+                            int obtuse_after_sim = simulateSteinerEffect(cdt, steiner_point);
+
+                            // Αν αυτή η στρατηγική βελτιώνει περισσότερο, κρατάμε αυτή τη στρατηγική
+                            if (obtuse_after_sim < best_obtuse_after_sim) {
+                                best_obtuse_after_sim = obtuse_after_sim;
+                                best_steiner_point = steiner_point;
+                            }
                         }
 
-                        // Υπολογισμός προσωρινής επίδρασης της προσθήκης Steiner
-                        int obtuse_after_sim = simulateSteinerEffect(cdt, steiner_point);
-
-                        if (obtuse_after_sim < obtuse_before) {// Αν βελτιώνει την κατάσταση, προσθέτουμε το σημείο πραγματικά
-                            cdt.insert(steiner_point);
-                            obtuse_before = obtuse_after_sim;
+                        // Εισαγωγή του καλύτερου Steiner point
+                        if (best_obtuse_after_sim < obtuse_before) {
+                            cdt.insert(best_steiner_point);
+                            obtuse_before = best_obtuse_after_sim;
                             std::cout << "Προσθήκη Steiner point βελτίωσε την κατάσταση." << std::endl;
                         }
                     }
@@ -126,20 +136,18 @@ namespace Triangulation {
                 }
             }
 
-            iterations++;
-            if (iterations == max_iter) {
-                strategy++;
-                iterations = 0;
-                if (strategy > 2) {
-                    std::cout << "Η διαδικασία ολοκληρώθηκε!" << std::endl;
-                    break;
-                }
+            if (countObtuseTriangles(cdt)>0){
+                hasObtuse=true;
             }
+            else {
+                break;
+            }
+
+            iterations++;
         }
 
         obtuse_before = countObtuseTriangles(cdt);
         std::cout << "Αμβλυγώνια τρίγωνα μετά την επεξεργασία: " << obtuse_before << std::endl;
-
 
         visualizeTriangulation(cdt);
     }
@@ -328,5 +336,50 @@ namespace Triangulation {
         // Εμφάνιση της τριγωνοποίησης (μέσω της υλοποίησης visualizePoints)
         visualizePoints(triangulated_points, constraints_);
     }
+
+    Point CDTProcessor::calculate_incenter(const Point& a, const Point& b, const Point& c) {
+        // Υπολογισμός των αποστάσεων A, B, C
+        double A = CGAL::squared_distance(b, c);
+        double B = CGAL::squared_distance(a, c);
+        double C = CGAL::squared_distance(a, b);
+
+        // Υπολογισμός των συντεταγμένων του incenter
+        double Ix = (A * a.x() + B * b.x() + C * c.x()) / (A + B + C);
+        double Iy = (A * a.y() + B * b.y() + C * c.y()) / (A + B + C);
+
+        return Point(Ix, Iy);
+    }
+
+
+
+    Point CDTProcessor::calculate_perpendicular_bisector_point(const Point& a, const Point& b, const Point& c) {
+        // Υπολογισμός του μέσου της πλευράς a-b
+        double mx = (a.x() + b.x()) / 2;
+        double my = (a.y() + b.y()) / 2;
+
+        // Υπολογισμός της κλίσης της πλευράς a-b
+        double dx = b.x() - a.x();
+        double dy = b.y() - a.y();
+
+        // Έλεγχος αν η πλευρά a-b είναι κάθετη (dx == 0)
+        if (dx == 0) {
+            // Αν η πλευρά είναι κάθετη, η κάθετος διχοτόμος θα είναι οριζόντια
+            return Point(mx, my + 1);  // Επιστρέφουμε ένα σημείο πάνω στην οριζόντια κάθετο διχοτόμο
+        }
+
+        // Κλίση της πλευράς a-b
+        double slope_ab = dy / dx;
+
+        // Κλίση της κάθετης διχοτόμου
+        double slope_perpendicular = -1 / slope_ab;
+
+        // Μετατόπιση κατά μια αυθαίρετη απόσταση (π.χ. 1 μονάδα) για να βρούμε σημείο πάνω στη διχοτόμο
+        double dx_perpendicular = 1 / sqrt(1 + slope_perpendicular * slope_perpendicular);
+        double dy_perpendicular = slope_perpendicular * dx_perpendicular;
+
+        // Το νέο σημείο πάνω στην κάθετο διχοτόμο (μετατοπισμένο από το μέσο της πλευράς a-b)
+        return Point(mx + dx_perpendicular, my + dy_perpendicular);
+    }   
+
 
 }

@@ -61,7 +61,8 @@ namespace Triangulation {
 
         Point getMidpointOfLongestEdge(const Point& p1, const Point& p2, const Point& p3);
 
-
+        Point calculate_incenter(const Point& a, const Point& b, const Point& c);
+        Point calculate_perpendicular_bisector_point(const Point& a, const Point& b, const Point& c);
     
     };
 }
