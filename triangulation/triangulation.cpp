@@ -97,6 +97,8 @@ namespace Triangulation {
                 auto p1 = fit->vertex(0)->point();
                 auto p2 = fit->vertex(1)->point();
                 auto p3 = fit->vertex(2)->point();
+                // Σημείο που θέλεις να προβάλεις
+                CGAL::Point_2<CGAL::Epick> p; // Ορισμός ή απόκτηση του σημείου p
 
                 if (!CGAL::is_finite(p1.x()) || !CGAL::is_finite(p1.y()) || !CGAL::is_finite(p2.x()) || !CGAL::is_finite(p2.y()) || !CGAL::is_finite(p3.x()) || !CGAL::is_finite(p3.y())) {
                     std::cerr << "Invalid point encountered in triangle." << std::endl;
@@ -110,7 +112,7 @@ namespace Triangulation {
 
                     if (!flipped) {
                         // Δοκιμή όλων των στρατηγικών για το τρέχον τρίγωνο
-                        for (int strategy = 0; strategy <= 4; ++strategy) {
+                        for (int strategy = 0; strategy <= 5; ++strategy) {
                             Point steiner_point;
 
                             if (strategy == 0) {
@@ -124,6 +126,10 @@ namespace Triangulation {
                             } else if (strategy == 4) {
                                 steiner_point = calculate_perpendicular_bisector_point(p1, p2, p3);  // Κάθετος διχοτόμος
                             }
+                            else if (strategy == 5){
+                                steiner_point = projectPointOntoTriangle(p,p1,p2,p3);
+                                std::cout << "Steiner Point: (" << steiner_point.x() << ", " << steiner_point.y() << ")\n";
+                            }
 
                             // Validate steiner_point
                             if (!CGAL::is_finite(steiner_point.x()) || !CGAL::is_finite(steiner_point.y())) {
@@ -133,12 +139,16 @@ namespace Triangulation {
 
                             // Υπολογισμός προσωρινής επίδρασης της προσθήκης Steiner point
                             int obtuse_after_sim = simulateSteinerEffect(cdt, steiner_point);
-
+                    
                             // Αν αυτή η στρατηγική βελτιώνει περισσότερο, κρατάμε αυτή τη στρατηγική
-                            if (obtuse_after_sim < best_obtuse_after_sim && !isPointInsideBoundary(std::make_pair(steiner_point.x(),steiner_point.y()),region_boundary_,points_)) {
+                            if (obtuse_after_sim < best_obtuse_after_sim && isPointInsideBoundary(std::make_pair(steiner_point.x(),steiner_point.y()),region_boundary_,points_)) {
+                                //std::cout << "Steiner Point in bounds: (" << steiner_point.x() << ", " << steiner_point.y() << ")\n";
                                 best_obtuse_after_sim = obtuse_after_sim;
                                 best_steiner_point = steiner_point;
                             }
+                            else if (!isPointInsideBoundary(std::make_pair(steiner_point.x(),steiner_point.y()),region_boundary_,points_)){
+                                //std::cout << "Steiner Point out of bounds: (" << steiner_point.x() << ", " << steiner_point.y() << ")\n";
+                            }                        
                         }
                     }
                 }
@@ -174,10 +184,26 @@ namespace Triangulation {
         int n = region_boundary.size();
         bool inside = false;
 
+        // Helper function to check if a point lies on a segment (p1, p2)
+        auto is_on_segment = [](const std::pair<double, double>& p,
+                                const std::pair<double, double>& p1,
+                                const std::pair<double, double>& p2) -> bool {
+            if (std::min(p1.first, p2.first) <= p.first && p.first <= std::max(p1.first, p2.first) &&
+                std::min(p1.second, p2.second) <= p.second && p.second <= std::max(p1.second, p2.second)) {
+                return (p2.first - p1.first) * (p.second - p1.second) == (p2.second - p1.second) * (p.first - p1.first);
+            }
+            return false;
+        };
+
         // Ray-casting algorithm: Check how many times a ray from the point intersects the polygon edges
         for (int i = 0, j = n - 1; i < n; j = i++) {
             const auto& p1 = points[region_boundary[i]];  // Current vertex
             const auto& p2 = points[region_boundary[j]];  // Previous vertex
+
+            // Check if the point is on the current edge
+            if (is_on_segment(point, p1, p2)) {
+                return true;  // If the point is on the boundary, return true
+            }
 
             // Check if the ray crosses the edge (p1, p2)
             if (((p1.second > point.second) != (p2.second > point.second)) &&
@@ -361,7 +387,6 @@ namespace Triangulation {
 
     // Συνάρτηση για την οπτικοποίηση της τριγωνοποίησης
     void CDTProcessor::visualizeTriangulation(const CDT& cdt) {
-        std::cout<<"here" << std::endl;
         std::vector<std::pair<double, double>> triangulated_points;
         for (auto fit = cdt.finite_faces_begin(); fit != cdt.finite_faces_end(); ++fit) {
             auto p1 = fit->vertex(0)->point();
@@ -387,8 +412,6 @@ namespace Triangulation {
 
         return Point(Ix, Iy);
     }
-
-
 
     Point CDTProcessor::calculate_perpendicular_bisector_point(const Point& a, const Point& b, const Point& c) {
         // Υπολογισμός του μέσου της πλευράς a-b
@@ -419,5 +442,40 @@ namespace Triangulation {
         return Point(mx + dx_perpendicular, my + dy_perpendicular);
     }   
 
+    // Συνάρτηση για τον υπολογισμό της κάθετης προβολής του σημείου p στο τρίγωνο
+    Point CDTProcessor::projectPointOntoTriangle(const Point& p, const Point& p1, const Point& p2, const Point& p3) {
+        // Υπολογισμός παραμέτρων για τις πλευρές του τριγώνου
+        auto projectOntoLine = [](const Point& p, const Point& a, const Point& b) {
+            double ab_x = b.x() - a.x();
+            double ab_y = b.y() - a.y();
+            double ap_x = p.x() - a.x();
+            double ap_y = p.y() - a.y();
 
+            double ab_squared = ab_x * ab_x + ab_y * ab_y;
+            if (ab_squared == 0) return a; // a και b είναι το ίδιο σημείο
+
+            // Υπολογισμός του κλάσματος
+            double t = (ap_x * ab_x + ap_y * ab_y) / ab_squared;
+            t = std::max(0.0, std::min(1.0, t)); // περιορισμός του t στο [0, 1]
+
+            return Point(a.x() + t * ab_x, a.y() + t * ab_y);
+        };
+
+        // Υπολογισμός της κάθετης προβολής για κάθε πλευρά του τριγώνου
+        Point proj1 = projectOntoLine(p, p1, p2);
+        Point proj2 = projectOntoLine(p, p2, p3);
+        Point proj3 = projectOntoLine(p, p3, p1);
+
+        double dist1 = std::sqrt((p.x() - proj1.x()) * (p.x() - proj1.x()) + (p.y() - proj1.y()) * (p.y() - proj1.y()));
+        double dist2 = std::sqrt((p.x() - proj2.x()) * (p.x() - proj2.x()) + (p.y() - proj2.y()) * (p.y() - proj2.y()));
+        double dist3 = std::sqrt((p.x() - proj3.x()) * (p.x() - proj3.x()) + (p.y() - proj3.y()) * (p.y() - proj3.y()));
+
+        if (dist1 <= dist2 && dist1 <= dist3) {
+            return proj1;
+        } else if (dist2 <= dist1 && dist2 <= dist3) {
+            return proj2;
+        } else {
+            return proj3;
+        }
+    }
 }
