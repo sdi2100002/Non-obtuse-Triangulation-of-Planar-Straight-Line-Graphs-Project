@@ -87,6 +87,13 @@
         "valarray": "cpp",
         "variant": "cpp",
         "ranges": "cpp",
-        "scoped_allocator": "cpp"
+        "scoped_allocator": "cpp",
+        "barrier": "cpp",
+        "expected": "cpp",
+        "rope": "cpp",
+        "latch": "cpp",
+        "spanstream": "cpp",
+        "stacktrace": "cpp",
+        "syncstream": "cpp"
     }
 }

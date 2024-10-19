@@ -55,6 +55,7 @@ namespace Triangulation {
 
 
     void CDTProcessor::processTriangulation() {
+        std::cout<<"process"<<std::endl;
         CDT cdt;
 
         // Εισαγωγή σημείων και ακμών στην τριγωνοποίηση
@@ -72,7 +73,7 @@ namespace Triangulation {
         int obtuse_before = countObtuseTriangles(cdt);
         std::cout << "Αμβλυγώνια τρίγωνα πριν την επεξεργασία: " << obtuse_before << std::endl;
 
-        int max_iter = 10000;
+        int max_iter = 100;
         int iterations = 0;
         int consecutive_no_improvement = 0;  // Counter to check how many iterations had no improvements
         const int max_no_improvement = 10;    // Maximum number of iterations with no improvement before trying more aggressive strategies
@@ -86,15 +87,21 @@ namespace Triangulation {
 
             // Έλεγχος για αμβλυγώνια τρίγωνα
             for (auto fit = cdt.finite_faces_begin(); fit != cdt.finite_faces_end(); ++fit) {
+                //std::cout<<"for loop"<<std::endl;
                 // Αγνοούμε τρίγωνα που βρίσκονται εκτός των ορίων
                 if (!isTriangleWithinBoundary(fit, region_boundary_)) {
-                    std::cout << "Triangle is outside boundary." << std::endl;
+                    //std::cout << "Triangle is outside boundary." << std::endl;
                     continue;  // Skip this triangle if it is outside the boundary
                 }
 
                 auto p1 = fit->vertex(0)->point();
                 auto p2 = fit->vertex(1)->point();
                 auto p3 = fit->vertex(2)->point();
+
+                if (!CGAL::is_finite(p1.x()) || !CGAL::is_finite(p1.y()) || !CGAL::is_finite(p2.x()) || !CGAL::is_finite(p2.y()) || !CGAL::is_finite(p3.x()) || !CGAL::is_finite(p3.y())) {
+                    std::cerr << "Invalid point encountered in triangle." << std::endl;
+                    continue;  // Skip the current triangle
+                }
 
                 // Έλεγχος αν το τρίγωνο είναι αμβλυγώνιο
                 if (isObtuseTriangle(p1, p2, p3)) {
@@ -118,11 +125,17 @@ namespace Triangulation {
                                 steiner_point = calculate_perpendicular_bisector_point(p1, p2, p3);  // Κάθετος διχοτόμος
                             }
 
+                            // Validate steiner_point
+                            if (!CGAL::is_finite(steiner_point.x()) || !CGAL::is_finite(steiner_point.y())) {
+                                std::cerr << "Invalid Steiner point calculated: " << steiner_point << std::endl;
+                                continue;  // Skip this strategy if the Steiner point is invalid
+                            }
+
                             // Υπολογισμός προσωρινής επίδρασης της προσθήκης Steiner point
                             int obtuse_after_sim = simulateSteinerEffect(cdt, steiner_point);
 
                             // Αν αυτή η στρατηγική βελτιώνει περισσότερο, κρατάμε αυτή τη στρατηγική
-                            if (obtuse_after_sim < best_obtuse_after_sim) {
+                            if (obtuse_after_sim < best_obtuse_after_sim && !isPointInsideBoundary(std::make_pair(steiner_point.x(),steiner_point.y()),region_boundary_,points_)) {
                                 best_obtuse_after_sim = obtuse_after_sim;
                                 best_steiner_point = steiner_point;
                             }
@@ -155,6 +168,25 @@ namespace Triangulation {
         std::cout << "Αμβλυγώνια τρίγωνα μετά την επεξεργασία: " << obtuse_before << std::endl;
 
         visualizeTriangulation(cdt);
+    }
+
+    bool CDTProcessor::isPointInsideBoundary(const std::pair<double, double>& point,const std::vector<int>& region_boundary,const std::vector<std::pair<double, double>>& points) const {
+        int n = region_boundary.size();
+        bool inside = false;
+
+        // Ray-casting algorithm: Check how many times a ray from the point intersects the polygon edges
+        for (int i = 0, j = n - 1; i < n; j = i++) {
+            const auto& p1 = points[region_boundary[i]];  // Current vertex
+            const auto& p2 = points[region_boundary[j]];  // Previous vertex
+
+            // Check if the ray crosses the edge (p1, p2)
+            if (((p1.second > point.second) != (p2.second > point.second)) &&
+                (point.first < (p2.first - p1.first) * (point.second - p1.second) / (p2.second - p1.second) + p1.first)) {
+                inside = !inside;
+            }
+        }
+
+        return inside;
     }
 
     // Συνάρτηση που ελέγχει αν το σημείο pt είναι πάνω στη γραμμή που ενώνεται από τα σημεία p1 και p2
@@ -329,6 +361,7 @@ namespace Triangulation {
 
     // Συνάρτηση για την οπτικοποίηση της τριγωνοποίησης
     void CDTProcessor::visualizeTriangulation(const CDT& cdt) {
+        std::cout<<"here" << std::endl;
         std::vector<std::pair<double, double>> triangulated_points;
         for (auto fit = cdt.finite_faces_begin(); fit != cdt.finite_faces_end(); ++fit) {
             auto p1 = fit->vertex(0)->point();

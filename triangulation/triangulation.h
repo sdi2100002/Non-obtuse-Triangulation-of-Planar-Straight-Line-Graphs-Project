@@ -29,12 +29,14 @@ namespace Triangulation {
     private:
         std::vector<std::pair<double, double>> points_;
         std::vector<std::pair<int, int>> constraints_;
-        std::vector<int> region_boundary_;
+        std::vector<int> region_boundary_; 
 
         // Συνάρτηση για την οπτικοποίηση της τριγωνοποίησης
         void visualizeTriangulation(const CDT& cdt);
 
         bool isPointOnSegment(const std::pair<double, double>& pt, const std::pair<double, double>& p1, const std::pair<double, double>& p2);
+
+        bool isPointInsideBoundary(const std::pair<double, double>& point,const std::vector<int>& region_boundary,const std::vector<std::pair<double, double>>& points) const ;
 
         bool isPointInPolygon(const std::pair<double, double>& pt, const std::vector<std::pair<double, double>>& polygon);
        
