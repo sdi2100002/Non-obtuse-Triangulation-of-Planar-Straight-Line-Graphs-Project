@@ -55,7 +55,6 @@ namespace Triangulation {
 
 
     void CDTProcessor::processTriangulation() {
-        std::cout<<"process"<<std::endl;
         CDT cdt;
 
         // Εισαγωγή σημείων και ακμών στην τριγωνοποίηση
@@ -128,7 +127,7 @@ namespace Triangulation {
                             }
                             else if (strategy == 5){
                                 steiner_point = projectPointOntoTriangle(p,p1,p2,p3);
-                                std::cout << "Steiner Point: (" << steiner_point.x() << ", " << steiner_point.y() << ")\n";
+                                //std::cout << "Steiner Point: (" << steiner_point.x() << ", " << steiner_point.y() << ")\n";
                             }
 
                             // Validate steiner_point
