@@ -112,13 +112,13 @@ namespace Triangulation {
                             Point steiner_point;
 
                             if (strategy == 0) {
-                                steiner_point = getMidpointOfLongestEdge(p1, p2, p3);
-                            } else if (strategy == 1) {
-                                steiner_point = CGAL::centroid(p1, p2, p3);  // Εσωτερικό κυρτού πολυγώνου
-                            } else if (strategy == 2) {
                                 steiner_point = CGAL::circumcenter(p1, p2, p3);  // Περικέντρο
-                            } else if (strategy == 3) {
+                            } else if (strategy == 1) {
                                 steiner_point = calculate_incenter(p1, p2, p3);  // Εσωτερικό τριγώνου
+                            } else if (strategy == 2) {
+                                steiner_point = getMidpointOfLongestEdge(p1, p2, p3);
+                            } else if (strategy == 3) {
+                                steiner_point = CGAL::centroid(p1, p2, p3);  // Εσωτερικό κυρτού πολυγώνου
                             } else if (strategy == 4) {
                                 steiner_point = calculate_perpendicular_bisector_point(p1, p2, p3);  // Κάθετος διχοτόμος
                             }
