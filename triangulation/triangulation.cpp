@@ -74,9 +74,6 @@ namespace Triangulation {
 
         int max_iter = 100;
         int iterations = 0;
-        int consecutive_no_improvement = 0;  // Counter to check how many iterations had no improvements
-        const int max_no_improvement = 10;    // Maximum number of iterations with no improvement before trying more aggressive strategies
-
         bool hasObtuse = true;
 
         while (hasObtuse && iterations < max_iter) {
@@ -158,18 +155,7 @@ namespace Triangulation {
                 cdt.insert(best_steiner_point);
                 obtuse_before = best_obtuse_after_sim;
                 std::cout << "Προσθήκη Steiner point βελτίωσε την κατάσταση. Αμβλυγώνια τρίγωνα: " << obtuse_before << std::endl;
-                consecutive_no_improvement = 0; // Reset counter for no improvement
-            } else {
-                consecutive_no_improvement++;
-                //std::cout << "No improvement in this iteration. Consecutive no improvement: " << consecutive_no_improvement << std::endl;
             }
-
-            if (consecutive_no_improvement >= max_no_improvement) {
-                //std::cout << "No improvement after " << max_no_improvement << " iterations. Trying more aggressive strategies." << std::endl;
-                // TODO :: Πιθανόν να προσπαθήσουμε κάτι πιο επιθετικό εδώ, όπως εισαγωγή πολλαπλών σημείων ή άλλες μεθόδους
-                consecutive_no_improvement = 0; // Reset after attempting an aggressive strategy
-            }
-
             iterations++;
         }
 
