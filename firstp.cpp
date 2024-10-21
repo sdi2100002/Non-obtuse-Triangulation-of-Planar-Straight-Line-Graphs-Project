@@ -134,5 +134,5 @@ int main(int argc, char *argv[]) {
     Triangulation::CDTProcessor cdtProcessor(points, additional_constraints, region_boundary);
     cdtProcessor.processTriangulation();
 
-    return app.exec(); // Ensure the app is executed at the end
+    return 0; // Ensure the app is executed at the end
 }
