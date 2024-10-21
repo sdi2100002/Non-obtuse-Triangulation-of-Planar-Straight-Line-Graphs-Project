@@ -129,7 +129,7 @@ namespace Triangulation {
 
                             // Validate steiner_point
                             if (!CGAL::is_finite(steiner_point.x()) || !CGAL::is_finite(steiner_point.y())) {
-                                std::cerr << "Invalid Steiner point calculated: " << steiner_point << std::endl;
+                                //std::cerr << "Invalid Steiner point calculated: " << steiner_point << std::endl;
                                 continue;  // Skip this strategy if the Steiner point is invalid
                             }
 
