@@ -10,8 +10,8 @@ namespace Triangulation {
     // Constructor
     CDTProcessor::CDTProcessor(const std::vector<std::pair<double, double>>& points, 
                            const std::vector<std::pair<int, int>>& constraints, 
-                           const std::vector<int>& region_boundary) 
-        : points_(points), constraints_(constraints), region_boundary_(region_boundary) {
+                           const std::vector<int>& region_boundary,const std::string& instance_uid) 
+        : points_(points), constraints_(constraints), region_boundary_(region_boundary) , instance_uid_(instance_uid) {
     
     // Δημιουργία additional boundary constraints
         for (size_t i = 0; i < region_boundary_.size(); ++i) {
@@ -56,6 +56,9 @@ namespace Triangulation {
 
     void CDTProcessor::processTriangulation() {
         CDT cdt;
+        std::vector<std::pair<double, double>> steiner_points; // Αποθήκευση των Steiner points
+        std::vector<std::pair<int, int>> edges; // Αποθήκευση των ακμών
+
 
         // Εισαγωγή σημείων και ακμών στην τριγωνοποίηση
         std::vector<CDT::Vertex_handle> vertices;
@@ -152,12 +155,28 @@ namespace Triangulation {
 
             // Εισαγωγή του καλύτερου Steiner point
             if (best_obtuse_after_sim < obtuse_before) {
-                cdt.insert(best_steiner_point);
+                auto new_vertex=cdt.insert(best_steiner_point);
+                steiner_points.push_back({best_steiner_point.x(),best_steiner_point.y()});
                 obtuse_before = best_obtuse_after_sim;
                 std::cout << "Προσθήκη Steiner point βελτίωσε την κατάσταση. Αμβλυγώνια τρίγωνα: " << obtuse_before << std::endl;
             }
             iterations++;
         }
+
+        for (auto eit=cdt.finite_edges_begin();eit!=cdt.finite_edges_end(); ++eit){
+            auto index1 = eit->first->vertex(eit->second)->info();
+            auto index2 = eit->first->vertex(eit->second == 0 ? 2 : eit->second - 1)->info();
+
+            // Έλεγχος αν οι δείκτες κορυφών είναι εντός ορίων
+            if (index1 >= 0 && index1 < points_.size() && index2 >= 0 && index2 < points_.size()) {
+                edges.push_back({index1, index2});
+            }
+            
+        }
+
+        json::object output_json = createOutputJson(instance_uid_, steiner_points, edges);
+
+        printOutputJson(output_json);
 
         obtuse_before = countObtuseTriangles(cdt);
         std::cout << "Αμβλυγώνια τρίγωνα μετά την επεξεργασία: " << obtuse_before << std::endl;
@@ -463,4 +482,103 @@ namespace Triangulation {
             return proj3;
         }
     }
+
+
+    json::object CDTProcessor::createOutputJson(const std::string& instance_uid,const std::vector<std::pair<double, double>>& steiner_points,const std::vector<std::pair<int, int>>& edges) {
+        // Δημιουργούμε το βασικό αντικείμενο JSON
+        json::object output;
+
+        // Προσθέτουμε το "content_type"
+        output["content_type"] = "CG_SHOP_2025_Solution";
+
+        // Προσθέτουμε το "instance_uid"
+        output["instance_uid"] = instance_uid;
+
+        // Προετοιμασία για τις συντεταγμένες των Steiner points (x και y)
+        json::array steiner_points_x;
+        json::array steiner_points_y;
+
+        for (const auto& point : steiner_points) {
+            steiner_points_x.push_back(point.first);  // Συντεταγμένες x
+            steiner_points_y.push_back(point.second); // Συντεταγμένες y
+        }
+
+        // Προσθέτουμε τις συντεταγμένες στο output JSON
+        output["steiner_points_x"] = steiner_points_x;
+        output["steiner_points_y"] = steiner_points_y;
+
+        // Προετοιμασία για τις ακμές
+        json::array edges_array;
+
+        for (const auto& edge : edges) {
+            // Για κάθε ακμή, δημιουργούμε ένα ζεύγος δεικτών
+            json::array edge_array;
+            edge_array.push_back(edge.first);
+            edge_array.push_back(edge.second);
+            edges_array.push_back(edge_array);
+        }
+
+        // Προσθέτουμε τις ακμές στο output JSON
+        output["edges"] = edges_array;
+
+        return output;
+    }
+
+    void CDTProcessor::printOutputJson(const json::object& output_json) {
+        std::cout << "{\n";  // Ξεκινάμε την εκτύπωση του JSON
+
+        // Εκτύπωση του content_type
+        std::cout << " \"content_type\": " << output_json.at("content_type").as_string() << ",\n";
+        
+        // Εκτύπωση του instance_uid
+        std::cout << " \"instance_uid\": " << output_json.at("instance_uid").as_string() << ",\n";
+
+        // Εκτύπωση των steiner_points_x
+        std::cout << " \"steiner_points_x\": [";
+        const auto& steiner_points_x = output_json.at("steiner_points_x").as_array();
+        for (size_t i = 0; i < steiner_points_x.size(); ++i) {
+            if (steiner_points_x[i].is_string()) {
+                std::cout << "\"" << steiner_points_x[i].as_string() << "\"";
+            } else {
+                std::cout << steiner_points_x[i].as_double();
+            }
+            if (i < steiner_points_x.size() - 1) {
+                std::cout << ", ";  // Προσθήκη κόμματος αν δεν είναι το τελευταίο στοιχείο
+            }
+        }
+        std::cout << "],\n";
+
+        // Εκτύπωση των steiner_points_y
+        std::cout << " \"steiner_points_y\": [";
+        const auto& steiner_points_y = output_json.at("steiner_points_y").as_array();
+        for (size_t i = 0; i < steiner_points_y.size(); ++i) {
+            if (steiner_points_y[i].is_string()) {
+                std::cout << "\"" << steiner_points_y[i].as_string() << "\"";
+            } else {
+                std::cout << steiner_points_y[i].as_double();
+            }
+            if (i < steiner_points_y.size() - 1) {
+                std::cout << ", ";  // Προσθήκη κόμματος αν δεν είναι το τελευταίο στοιχείο
+            }
+        }
+        std::cout << "],\n";
+
+        // Εκτύπωση των edges
+        std::cout << " \"edges\": [\n";
+        const auto& edges = output_json.at("edges").as_array();
+        for (size_t i = 0; i < edges.size(); ++i) {
+            auto edge_array = edges[i].as_array();
+            std::cout << "  [";
+            std::cout << edge_array[0].as_int64() << ", " << edge_array[1].as_int64() << "]";
+            if (i < edges.size() - 1) {
+                std::cout << ",\n";  // Προσθήκη κόμματος αν δεν είναι το τελευταίο στοιχείο
+            }
+        }
+        std::cout << "\n ]\n"; // Κλείνουμε την εκτύπωση των edges
+
+        std::cout << "}\n"; // Κλείνουμε το JSON
+   
+    }
+
+
 }

@@ -13,7 +13,7 @@ using namespace boost::json;
 // Function to format the JSON object into the desired output format
 void printJsonFormatted(const object& obj) {
     std::cout << "{\n";
-    std::cout << "  \"instance_uid\": \"" << obj.at("instance_uid").as_string() << "\",\n";
+    std::cout << "  \"instance_uid\": " << obj.at("instance_uid").as_string() << ",\n";
     std::cout << "  \"num_points\": " << obj.at("num_points").as_int64() << ",\n";
     
     // Print points_x
@@ -131,7 +131,7 @@ int main(int argc, char *argv[]) {
     visualizePoints(points, additional_constraints);
 
     // Pass region_boundary into the CDTProcessor
-    Triangulation::CDTProcessor cdtProcessor(points, additional_constraints, region_boundary);
+    Triangulation::CDTProcessor cdtProcessor(points, additional_constraints, region_boundary,instance_uid);
     cdtProcessor.processTriangulation();
 
     return 0; // Ensure the app is executed at the end

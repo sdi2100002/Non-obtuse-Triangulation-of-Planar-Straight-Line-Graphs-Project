@@ -5,6 +5,9 @@
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <CGAL/Constrained_Delaunay_triangulation_2.h>
 #include <CGAL/Triangulation_vertex_base_with_info_2.h>
+#include <boost/json.hpp>
+
+namespace json = boost::json;
 
 // CGAL typedefs
 typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
@@ -19,9 +22,7 @@ namespace Triangulation {
     // Κλάση για την τριγωνοποίηση
     class CDTProcessor {
     public:
-        CDTProcessor(const std::vector<std::pair<double, double>>& points, 
-                     const std::vector<std::pair<int, int>>& constraints,
-                     const std::vector<int>& region_boundary);
+        CDTProcessor(const std::vector<std::pair<double, double>>& points, const std::vector<std::pair<int, int>>& constraints,const std::vector<int>& region_boundary,const std::string& instance_uid);
         
         // Συνάρτηση για την επεξεργασία της τριγωνοποίησης
         void processTriangulation();
@@ -30,6 +31,7 @@ namespace Triangulation {
         std::vector<std::pair<double, double>> points_;
         std::vector<std::pair<int, int>> constraints_;
         std::vector<int> region_boundary_; 
+        std::string instance_uid_; // Προσθήκη του instance_uid
 
         // Συνάρτηση για την οπτικοποίηση της τριγωνοποίησης
         void visualizeTriangulation(const CDT& cdt);
@@ -66,6 +68,9 @@ namespace Triangulation {
         Point calculate_incenter(const Point& a, const Point& b, const Point& c);
         Point calculate_perpendicular_bisector_point(const Point& a, const Point& b, const Point& c);
         Point projectPointOntoTriangle(const Point& p, const Point& p1, const Point& p2, const Point& p3);
+
+        json::object createOutputJson(const std::string& instance_uid,const std::vector<std::pair<double, double>>& steiner_points,const std::vector<std::pair<int, int>>& edges);
+        void printOutputJson(const json::object& output_json);
     };
 }
 
