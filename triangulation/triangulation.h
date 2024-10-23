@@ -42,7 +42,6 @@ namespace Triangulation {
 
         bool isPointInPolygon(const std::pair<double, double>& pt, const std::vector<std::pair<double, double>>& polygon);
        
-
         bool isTriangleWithinBoundary(const CDT::Face_handle& face, const std::vector<int>& boundary);
 
         double squaredDistance(const Point& p1, const Point& p2);
@@ -50,26 +49,21 @@ namespace Triangulation {
         bool isObtuseTriangle(const Point& p1, const Point& p2, const Point& p3);
         
         int countObtuseTriangles(const CDT& cdt);
-
-        bool isValidFlip(const Point& p1, const Point& p2, const Point& p3, const Point& p4);
         
         bool tryEdgeFlipping(CDT& cdt, CDT::Face_handle face);
-        
-        void addSteinerPoint(CDT& cdt, const Point& p1, const Point& p2, const Point& p3);
-
-        void addSteinerAtCircumcenter(CDT& cdt, const Point& p1,const Point& p2, const Point& p3);
-        
-        void addSteinerInConvexPolygon(CDT& cdt, const Point& p1,const Point& p2, const Point& p3);
         
         int simulateSteinerEffect(CDT& cdt, const Point& steiner_point);
 
         Point getMidpointOfLongestEdge(const Point& p1, const Point& p2, const Point& p3);
 
         Point calculate_incenter(const Point& a, const Point& b, const Point& c);
+        
         Point calculate_perpendicular_bisector_point(const Point& a, const Point& b, const Point& c);
+        
         Point projectPointOntoTriangle(const Point& p, const Point& p1, const Point& p2, const Point& p3);
 
         json::object createOutputJson(const std::string& instance_uid,const std::vector<std::pair<double, double>>& steiner_points,const std::vector<std::pair<int, int>>& edges);
+        
         void printOutputJson(const json::object& output_json);
     };
 }

@@ -8,9 +8,7 @@
 namespace Triangulation {
 
     // Constructor
-    CDTProcessor::CDTProcessor(const std::vector<std::pair<double, double>>& points, 
-                           const std::vector<std::pair<int, int>>& constraints, 
-                           const std::vector<int>& region_boundary,const std::string& instance_uid) 
+    CDTProcessor::CDTProcessor(const std::vector<std::pair<double, double>>& points, const std::vector<std::pair<int, int>>& constraints, const std::vector<int>& region_boundary,const std::string& instance_uid) 
         : points_(points), constraints_(constraints), region_boundary_(region_boundary) , instance_uid_(instance_uid) {
     
     // Δημιουργία additional boundary constraints
@@ -75,7 +73,7 @@ namespace Triangulation {
         int obtuse_before = countObtuseTriangles(cdt);
         std::cout << "Αμβλυγώνια τρίγωνα πριν την επεξεργασία: " << obtuse_before << std::endl;
 
-        int max_iter = 100;
+        int max_iter = 1000;
         int iterations = 0;
         bool hasObtuse = true;
 
@@ -302,17 +300,6 @@ namespace Triangulation {
         }
     }
 
-    bool CDTProcessor::isValidFlip(const Point& p1, const Point& p2, const Point& p3, const Point& p4) {
-        // Ελέγχουμε αν τα νέα τρίγωνα είναι obtuse
-        if (isObtuseTriangle(p1, p2, p4)) {
-            return false; // Το πρώτο τρίγωνο είναι obtuse
-        }
-        if (isObtuseTriangle(p2, p3, p4)) {
-            return false; // Το δεύτερο τρίγωνο είναι obtuse
-        }
-        return true; // Το flip είναι έγκυρο
-    }
-
     bool CDTProcessor::tryEdgeFlipping(CDT& cdt, CDT::Face_handle face) {
         bool flipped = false;
 
@@ -350,43 +337,6 @@ namespace Triangulation {
             }
         }
         return flipped;
-    }
-
-    // Συνάρτηση για να προσθέσεις σημείο Steiner στη μέση της μεγαλύτερης ακμής
-    void CDTProcessor::addSteinerPoint(CDT& cdt, const Point& p1, const Point& p2, const Point& p3) {
-        // Βρίσκουμε τη μεγαλύτερη ακμή
-        double a2 = squaredDistance(p2, p3);
-        double b2 = squaredDistance(p1, p3);
-        double c2 = squaredDistance(p1, p2);
-
-        Point midpoint;
-        if (a2 >= b2 && a2 >= c2) {
-            // Μεσαίο σημείο της ακμής p2-p3
-            midpoint = CGAL::midpoint(p2, p3);
-        } else if (b2 >= a2 && b2 >= c2) {
-            // Μεσαίο σημείο της ακμής p1-p3
-            midpoint = CGAL::midpoint(p1, p3);
-        } else {
-            // Μεσαίο σημείο της ακμής p1-p2
-            midpoint = CGAL::midpoint(p1, p2);
-        }
-
-        // Προσθέτουμε το σημείο Steiner
-        cdt.insert(midpoint);
-    }
-
-    // Συνάρτηση για να προσθέσουμε σημείο Steiner στο περικεντρο του τριγώνου
-    void CDTProcessor::addSteinerAtCircumcenter(CDT& cdt, const Point& p1,const Point& p2, const Point& p3) {
-        // Υπολογισμός του περικέντρου
-        Point circumcenter = CGAL::circumcenter(p1, p2, p3);
-        cdt.insert(circumcenter);
-    }
-
-    // Συνάρτηση για να προσθέσουμε σημείο Steiner στο εσωτερικό κυρτού πολυγώνου
-    void CDTProcessor::addSteinerInConvexPolygon(CDT& cdt, const Point& p1,const Point& p2, const Point& p3) {
-        // Προσδιορισμός του κέντρου βάρους ως απλή λύση για το εσωτερικό του κυρτού πολυγώνου
-        Point centroid = CGAL::centroid(p1, p2, p3);
-        cdt.insert(centroid);
     }
 
     // Συνάρτηση για την οπτικοποίηση της τριγωνοποίησης
@@ -482,7 +432,6 @@ namespace Triangulation {
             return proj3;
         }
     }
-
 
     json::object CDTProcessor::createOutputJson(const std::string& instance_uid,const std::vector<std::pair<double, double>>& steiner_points,const std::vector<std::pair<int, int>>& edges) {
         // Δημιουργούμε το βασικό αντικείμενο JSON
