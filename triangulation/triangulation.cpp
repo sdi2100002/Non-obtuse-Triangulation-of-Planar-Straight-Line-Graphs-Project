@@ -73,7 +73,7 @@ namespace Triangulation {
         int obtuse_before = countObtuseTriangles(cdt);
         std::cout << "Αμβλυγώνια τρίγωνα πριν την επεξεργασία: " << obtuse_before << std::endl;
 
-        int max_iter = 1000;
+        int max_iter = 100;
         int iterations = 0;
         bool hasObtuse = true;
 
