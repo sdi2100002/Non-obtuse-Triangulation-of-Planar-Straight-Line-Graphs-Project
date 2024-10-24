@@ -94,6 +94,7 @@
         "latch": "cpp",
         "spanstream": "cpp",
         "stacktrace": "cpp",
-        "syncstream": "cpp"
+        "syncstream": "cpp",
+        "qapplication": "cpp"
     }
 }
