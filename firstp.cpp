@@ -15,21 +15,21 @@ using namespace boost::json;
 
 int main(int argc, char *argv[]) {
     // Create the QApplication instance
-    QApplication app(argc, argv); // This must be the first GUI-related object created
+    QApplication app(argc, argv); 
 
-    // Load the JSON data
+    // Load the JSON data from the input.json file
     std::string jsonData;
     if (!loadJsonFile("../input.json", jsonData)) {
         return 1;
     }
 
-    // Parse the JSON
+    // Parse the JSON data into a JSON object
     object obj = parseJson(jsonData);
 
     // Print the formatted JSON
     printJsonFormatted(obj);
 
-    // Retrieve necessary fields from the JSON object
+    // Declare variables to hold the retrieved fields from the JSON object
     std::string instance_uid;
     int num_points;
     std::vector<int> points_x, points_y;
@@ -37,6 +37,7 @@ int main(int argc, char *argv[]) {
     std::vector<std::pair<int, int>> additional_constraints;
     std::vector<int> region_boundary;
 
+    // Retrieve necessary fields from the JSON object into the declared variables
     retrieveFields(obj, instance_uid, num_points, points_x, points_y, num_constraints, additional_constraints, region_boundary);
 
     // Create a vector of pairs for the points
@@ -48,5 +49,5 @@ int main(int argc, char *argv[]) {
     // Process triangulation
     CallprocessTriangulation(points, additional_constraints, region_boundary, instance_uid);
 
-    return 0; // Ensure the app is executed at the end
+    return 0; 
 }
