@@ -7,137 +7,151 @@
 
 namespace Triangulation {
 
-    // Constructor
+    // Constructor 
     CDTProcessor::CDTProcessor(const std::vector<std::pair<double, double>>& points, const std::vector<std::pair<int, int>>& constraints, const std::vector<int>& region_boundary,const std::string& instance_uid) 
         : points_(points), constraints_(constraints), region_boundary_(region_boundary) , instance_uid_(instance_uid) {
     
-    // Δημιουργία additional boundary constraints
+        //Adding the boundary constraints (the region boundary is treated as a contraint)
         for (size_t i = 0; i < region_boundary_.size(); ++i) {
             int start = region_boundary_[i];
-            int end = region_boundary_[(i + 1) % region_boundary_.size()]; // Wrap around to the first point
+            int end = region_boundary_[(i + 1) % region_boundary_.size()];
             constraints_.emplace_back(start, end);
         }
     }
 
-    // Function to calculate the squared length of a segment
+    // This function calculates the squared distance between two points
     double CDTProcessor::squaredDistance(const Point& p1, const Point& p2) {
         return CGAL::square(p1.x() - p2.x()) + CGAL::square(p1.y() - p2.y());
     }
 
-    // Function to check if a triangle is obtuse
+    // This function checks if a triangle is obtuse
     bool CDTProcessor::isObtuseTriangle(const Point& p1, const Point& p2, const Point& p3) {
+        //Calculates the squared lenghts of the triangles sides
         double a2 = squaredDistance(p2, p3);
         double b2 = squaredDistance(p1, p3);
         double c2 = squaredDistance(p1, p2);
 
+        //Checking the obtuse condition and returns true if the triangle is obtuse false otherwise
         return (a2 + b2 < c2) || (a2 + c2 < b2) || (b2 + c2 < a2);
     }
 
-    // Συνάρτηση που μετράει τα αμβλυγώνια τρίγωνα
+    //This function counts the obtuse triangles in the triangulation
     int CDTProcessor::countObtuseTriangles(const CDT& cdt) {
+        //Init the counter
         int obtuse_count = 0;
 
-        // Ελέγχουμε κάθε τρίγωνο αν είναι αμβλυγώνιο
+        //Loop through all finite faces (triangles) in the cdt
         for (auto fit = cdt.finite_faces_begin(); fit != cdt.finite_faces_end(); ++fit) {
+            //Get the vertices of the current triangle
             auto p1 = fit->vertex(0)->point();
             auto p2 = fit->vertex(1)->point();
             auto p3 = fit->vertex(2)->point();
 
+            //Check if the triangle is obtuse and if it is do the counter++
             if (isObtuseTriangle(p1, p2, p3)) {
-                ++obtuse_count;
+                obtuse_count++;
             }
         }
-
+        //return the counter
         return obtuse_count;
     }
 
-
+    //This is the Main function to process the triangulation 
     void CDTProcessor::processTriangulation() {
         CDT cdt;
-        std::vector<std::pair<double, double>> steiner_points; // Αποθήκευση των Steiner points
-        std::vector<std::pair<int, int>> edges; // Αποθήκευση των ακμών
+        std::vector<std::pair<double, double>> steiner_points;
+        std::vector<std::pair<int, int>> edges; 
 
 
-        // Εισαγωγή σημείων και ακμών στην τριγωνοποίηση
+        // Insert the points into the triangulation
         std::vector<CDT::Vertex_handle> vertices;
         for (size_t i = 0; i < points_.size(); ++i) {
             vertices.push_back(cdt.insert(Point(points_[i].first, points_[i].second)));
-            vertices.back()->info() = i;
+            vertices.back()->info() = i; //Vertex index for indentification
         }
 
-        // Εισαγωγή constraints που περιλαμβάνουν και τα boundaries από τον constructor
+        //Insert the constraints (and the boundary constraints)
         for (const auto& constraint : constraints_) {
             cdt.insert_constraint(vertices[constraint.first], vertices[constraint.second]);
         }
 
+        //Count and print the number of obtuse triangles before the process of the triangulation begins
         int obtuse_before = countObtuseTriangles(cdt);
         std::cout << "Αμβλυγώνια τρίγωνα πριν την επεξεργασία: " << obtuse_before << std::endl;
 
-        int max_iter = 100;
-        int iterations = 0;
-        bool hasObtuse = true;
+        int max_iter = 100; //var to store max number of loops
+        int iterations = 0; //var to store loops done
+        bool hasObtuse = true;  //there is at least one more obtuse triangle 
 
+        //Main loop to perform the process that reduces the obtuses triangles 
+        //While there is at least one obtuse triangle and we haven't reach the number of max iterations
         while (hasObtuse && iterations < max_iter) {
             hasObtuse = false;
-            int best_obtuse_after_sim = obtuse_before; // Track best obtuse triangle count in this iteration
+            int best_obtuse_after_sim = obtuse_before;
             Point best_steiner_point;
 
-            // Έλεγχος για αμβλυγώνια τρίγωνα
+            //For each triangle check if there is an obtuse 
             for (auto fit = cdt.finite_faces_begin(); fit != cdt.finite_faces_end(); ++fit) {
-                //std::cout<<"for loop"<<std::endl;
-                // Αγνοούμε τρίγωνα που βρίσκονται εκτός των ορίων
+                
+                // Skip the triangles outside the region boundary
                 if (!isTriangleWithinBoundary(fit, region_boundary_)) {
                     //std::cout << "Triangle is outside boundary." << std::endl;
-                    continue;  // Skip this triangle if it is outside the boundary
+                    continue;
                 }
 
                 auto p1 = fit->vertex(0)->point();
                 auto p2 = fit->vertex(1)->point();
                 auto p3 = fit->vertex(2)->point();
-                // Σημείο που θέλεις να προβάλεις
-                CGAL::Point_2<CGAL::Epick> p; // Ορισμός ή απόκτηση του σημείου p
-
+                
+                CGAL::Point_2<CGAL::Epick> p; //point for project strategy
+                
+                //Skip triangles with vertices values infinite or NaN coordinates
                 if (!CGAL::is_finite(p1.x()) || !CGAL::is_finite(p1.y()) || !CGAL::is_finite(p2.x()) || !CGAL::is_finite(p2.y()) || !CGAL::is_finite(p3.x()) || !CGAL::is_finite(p3.y())) {
                     std::cerr << "Invalid point encountered in triangle." << std::endl;
                     continue;  // Skip the current triangle
                 }
 
-                // Έλεγχος αν το τρίγωνο είναι αμβλυγώνιο
+                // Checking if the current triangle is obtuse
                 if (isObtuseTriangle(p1, p2, p3)) {
-                    hasObtuse = true;  // Found an obtuse triangle
+                    hasObtuse = true;  // Found at least one obtuse triangle
+
+                    // Try edge-flipping to resolve the obtuse triangle
                     bool flipped = tryEdgeFlipping(cdt, fit);
 
+                    //If edge-flipping fails, proceed to Steiner point insertion strategies
+                    //The function tryEdgeFlipping always returns False!! so we will always get in this if statement
                     if (!flipped) {
-                        // Δοκιμή όλων των στρατηγικών για το τρέχον τρίγωνο
+                        
+                        // Try all the strategies we are using to place a steiner point in this triangle
                         for (int strategy = 0; strategy <= 5; ++strategy) {
                             Point steiner_point;
 
                             if (strategy == 0) {
-                                steiner_point = CGAL::circumcenter(p1, p2, p3);  // Περικέντρο
+                                steiner_point = CGAL::circumcenter(p1, p2, p3);  // Circumcenter
                             } else if (strategy == 1) {
-                                steiner_point = calculate_incenter(p1, p2, p3);  // Εσωτερικό τριγώνου
+                                steiner_point = calculate_incenter(p1, p2, p3);  // Incenter
                             } else if (strategy == 2) {
-                                steiner_point = getMidpointOfLongestEdge(p1, p2, p3);
+                                steiner_point = getMidpointOfLongestEdge(p1, p2, p3); // Midpoint of longest edge
                             } else if (strategy == 3) {
-                                steiner_point = CGAL::centroid(p1, p2, p3);  // Εσωτερικό κυρτού πολυγώνου
+                                steiner_point = CGAL::centroid(p1, p2, p3);  // Centroid
                             } else if (strategy == 4) {
-                                steiner_point = calculate_perpendicular_bisector_point(p1, p2, p3);  // Κάθετος διχοτόμος
+                                steiner_point = calculate_perpendicular_bisector_point(p1, p2, p3);  // Perpendicular bisector point
                             }
                             else if (strategy == 5){
-                                steiner_point = projectPointOntoTriangle(p,p1,p2,p3);
+                                steiner_point = projectPointOntoTriangle(p,p1,p2,p3); // Projected Steiner point onto triangle
                                 //std::cout << "Steiner Point: (" << steiner_point.x() << ", " << steiner_point.y() << ")\n";
                             }
 
-                            // Validate steiner_point
+                            // Check if the coordinates of the steiner point are either inf or NaN
                             if (!CGAL::is_finite(steiner_point.x()) || !CGAL::is_finite(steiner_point.y())) {
                                 //std::cerr << "Invalid Steiner point calculated: " << steiner_point << std::endl;
                                 continue;  // Skip this strategy if the Steiner point is invalid
                             }
 
-                            // Υπολογισμός προσωρινής επίδρασης της προσθήκης Steiner point
+                            //Simulate the effect of inserting the Steiner point,count the obtuse triangles after the insertion of this steiner point
                             int obtuse_after_sim = simulateSteinerEffect(cdt, steiner_point);
                     
-                            // Αν αυτή η στρατηγική βελτιώνει περισσότερο, κρατάμε αυτή τη στρατηγική
+                            // In case this strategy reduces the obtuse triangles and the steiner point is within the boundary select it
                             if (obtuse_after_sim < best_obtuse_after_sim && isPointInsideBoundary(std::make_pair(steiner_point.x(),steiner_point.y()),region_boundary_,points_)) {
                                 //std::cout << "Steiner Point in bounds: (" << steiner_point.x() << ", " << steiner_point.y() << ")\n";
                                 best_obtuse_after_sim = obtuse_after_sim;
@@ -151,7 +165,7 @@ namespace Triangulation {
                 }
             }
 
-            // Εισαγωγή του καλύτερου Steiner point
+            // Insert the best Steiner point found from the  strategies
             if (best_obtuse_after_sim < obtuse_before) {
                 auto new_vertex=cdt.insert(best_steiner_point);
                 steiner_points.push_back({best_steiner_point.x(),best_steiner_point.y()});
@@ -161,37 +175,43 @@ namespace Triangulation {
             iterations++;
         }
 
+        //Select the final edges from the triangulation
         for (auto eit=cdt.finite_edges_begin();eit!=cdt.finite_edges_end(); ++eit){
-            auto index1 = eit->first->vertex(eit->second)->info();
+            //Get the vertex index1 and 2
+            auto index1 = eit->first->vertex(eit->second)->info();  
             auto index2 = eit->first->vertex(eit->second == 0 ? 2 : eit->second - 1)->info();
 
-            // Έλεγχος αν οι δείκτες κορυφών είναι εντός ορίων
+            // Check if the indices are valid and within the bounds
             if (index1 >= 0 && index1 < points_.size() && index2 >= 0 && index2 < points_.size()) {
-                edges.push_back({index1, index2});
+                edges.push_back({index1, index2}); // add the edge to the result list
             }
             
         }
 
+        //Create the output JSON object 
         json::object output_json = createOutputJson(instance_uid_, steiner_points, edges);
 
+        // Print the output JSON
         printOutputJson(output_json);
 
+        //Count and print the number of the obtuse triangles after the process of triangulation
         obtuse_before = countObtuseTriangles(cdt);
         std::cout << "Αμβλυγώνια τρίγωνα μετά την επεξεργασία: " << obtuse_before << std::endl;
 
+        //Visulize the final triangulation
         visualizeTriangulation(cdt);
     }
 
+    //This function checks if a given point lies inside the region boundary 
     bool CDTProcessor::isPointInsideBoundary(const std::pair<double, double>& point,const std::vector<int>& region_boundary,const std::vector<std::pair<double, double>>& points) const {
-        int n = region_boundary.size();
-        bool inside = false;
+        int n = region_boundary.size(); // Number of vertices in the boundary
+        bool inside = false; //flag init as false
 
         // Helper function to check if a point lies on a segment (p1, p2)
-        auto is_on_segment = [](const std::pair<double, double>& p,
-                                const std::pair<double, double>& p1,
-                                const std::pair<double, double>& p2) -> bool {
+        auto is_on_segment = [](const std::pair<double, double>& p,const std::pair<double, double>& p1,const std::pair<double, double>& p2) -> bool {
             if (std::min(p1.first, p2.first) <= p.first && p.first <= std::max(p1.first, p2.first) &&
                 std::min(p1.second, p2.second) <= p.second && p.second <= std::max(p1.second, p2.second)) {
+                //Checks if the point lies exactly on the lie segment  
                 return (p2.first - p1.first) * (p.second - p1.second) == (p2.second - p1.second) * (p.first - p1.first);
             }
             return false;
@@ -199,8 +219,9 @@ namespace Triangulation {
 
         // Ray-casting algorithm: Check how many times a ray from the point intersects the polygon edges
         for (int i = 0, j = n - 1; i < n; j = i++) {
-            const auto& p1 = points[region_boundary[i]];  // Current vertex
-            const auto& p2 = points[region_boundary[j]];  // Previous vertex
+            //Current and previous vertex
+            const auto& p1 = points[region_boundary[i]];  
+            const auto& p2 = points[region_boundary[j]];  
 
             // Check if the point is on the current edge
             if (is_on_segment(point, p1, p2)) {
@@ -210,61 +231,67 @@ namespace Triangulation {
             // Check if the ray crosses the edge (p1, p2)
             if (((p1.second > point.second) != (p2.second > point.second)) &&
                 (point.first < (p2.first - p1.first) * (point.second - p1.second) / (p2.second - p1.second) + p1.first)) {
-                inside = !inside;
+                inside = !inside; //change the value of the flag
             }
         }
 
         return inside;
     }
 
-    // Συνάρτηση που ελέγχει αν το σημείο pt είναι πάνω στη γραμμή που ενώνεται από τα σημεία p1 και p2
+    // This function checks if the point pt is on the line segment formed by points p1 and p2
     bool CDTProcessor::isPointOnSegment(const std::pair<double, double>& pt, const std::pair<double, double>& p1, const std::pair<double, double>& p2) {
+        //Calculate the cross product in order to determine the collinearity
         double crossProduct = (pt.second - p1.second) * (p2.first - p1.first) - (pt.first - p1.first) * (p2.second - p1.second);
         if (std::abs(crossProduct) > 1e-10) {
-            return false; // Το σημείο δεν είναι στη γραμμή
+            return false; // The point is not on the line 
         }
 
-        // Ελέγχουμε αν το σημείο pt βρίσκεται εντός των ορίων της γραμμής
+        // Checking if the point pt is whitin the bounds of the line segment
         if (pt.first < std::min(p1.first, p2.first) || pt.first > std::max(p1.first, p2.first) ||
             pt.second < std::min(p1.second, p2.second) || pt.second > std::max(p1.second, p2.second)) {
-            return false; // Το σημείο είναι εκτός των ορίων
+            return false; // The point is outside
         }
 
-        return true; // Το σημείο είναι πάνω στη γραμμή
+        return true; // The point is on the line segment
     }
 
+    // This function checks if a point is inside a polygon
     bool CDTProcessor::isPointInPolygon(const std::pair<double, double>& pt, const std::vector<std::pair<double, double>>& polygon) {
-        int n = polygon.size();
-        bool inside = false;
+        int n = polygon.size();// Number of vertices in the boundary
+        bool inside = false;//flag init as false
 
+        // Ray-casting algorithm to determine if the point is inside the polygon
         for (int i = 0, j = n - 1; i < n; j = i++) {
+            // Check if the ray crosses the edge between polygon[i] and polygon[j]
             if (((polygon[i].second > pt.second) != (polygon[j].second > pt.second)) &&
                 (pt.first < (polygon[j].first - polygon[i].first) * (pt.second - polygon[i].second) / 
                 (polygon[j].second - polygon[i].second) + polygon[i].first)) {
-                inside = !inside;
+                inside = !inside; // Change the value of flag
             }
-            // Έλεγχος αν το σημείο βρίσκεται πάνω σε μια πλευρά του πολυγώνου
+            // Checking if the point is on any edge of the polygon
             if (isPointOnSegment(pt, polygon[i], polygon[j])) {
                 //std::cout << "Το σημείο (" << pt.first << ", " << pt.second << ") είναι πάνω στο περίγραμμα του πολύγωνου." << std::endl;
-                return true; // Επιστρέφουμε true εφόσον το σημείο είναι στο περίγραμμα
+                return true; // Returns true when the point is on the boundary
             }
         }
-        // Αν το σημείο δεν είναι μέσα στο πολύγωνο, εκτύπωσε τις συντεταγμένες του
+
+        // In case the point is not insde the polygon prints its coordinates
         if (!inside) {
             std::cout << "Το σημείο (" << pt.first << ", " << pt.second << ") δεν είναι μέσα στο πολύγωνο." << std::endl;
         }
-        // std::cout << "Το σημείο (" << pt.first << ", " << pt.second << ")  στο πολύγωνο." << std::endl;
-        return inside;
+        
+        return inside; 
     }
 
+    //This function is checking if a triangle is within the given boundary defined by region_boundary
     bool CDTProcessor::isTriangleWithinBoundary(const CDT::Face_handle& face, const std::vector<int>& boundary) {
-        // Prepare the polygon points from region_boundary
+        // Preparing the polygon points from region_boundary
         std::vector<std::pair<double, double>> polygon;
         for (int index : boundary) {
             polygon.emplace_back(points_[index]);
         }
 
-        // Retrieve triangle vertices from the face
+        //Get the vertices of the current triangle
         auto p1 = std::make_pair(face->vertex(0)->point().x(), face->vertex(0)->point().y());
         auto p2 = std::make_pair(face->vertex(1)->point().x(), face->vertex(1)->point().y());
         auto p3 = std::make_pair(face->vertex(2)->point().x(), face->vertex(2)->point().y());
@@ -273,60 +300,64 @@ namespace Triangulation {
         return isPointInPolygon(p1, polygon) && isPointInPolygon(p2, polygon) && isPointInPolygon(p3, polygon);
     }
 
-    // Συνάρτηση για υπολογισμό της επίδρασης του Steiner point χωρίς να προστεθεί
+    // This function is to simulate the effect of a Steiner point without adding it to the triangulation
     int CDTProcessor::simulateSteinerEffect(CDT& cdt, const Point& steiner_point) {
-        // Προσωρινή αντιγραφή του CDT για να ελέγξουμε την επίδραση
+        //Create a copy of the CDT to check the effect of the steiner point
         CDT temp_cdt = cdt;
 
-        // Προσθήκη του Steiner point στον προσωρινό πίνακα
+        //Insertion of the steiner point to the temp CDT
         temp_cdt.insert(steiner_point);
 
-        // Υπολογισμός του αριθμού των αμβλυγώνιων τριγώνων μετά την προσθήκη
+        //Calcuate the number of obtuse triangles after the insertion and return this number
         return countObtuseTriangles(temp_cdt);
     }
 
-    // Συνάρτηση για να πάρουμε το μέσο της μεγαλύτερης ακμής
+    // This function is used to get the midpoint of the longest edge
     Point CDTProcessor::getMidpointOfLongestEdge(const Point& p1, const Point& p2, const Point& p3) {
+        // Calculate the squared distances between the vertices
         double a2 = squaredDistance(p2, p3);
         double b2 = squaredDistance(p1, p3);
         double c2 = squaredDistance(p1, p2);
 
+        // Find the biggest edge and return the midpoint of this edge
         if (a2 >= b2 && a2 >= c2) {
-            return CGAL::midpoint(p2, p3);  // Μεσο της μεγαλύτερης ακμής p2-p3
+            return CGAL::midpoint(p2, p3);  
         } else if (b2 >= a2 && b2 >= c2) {
-            return CGAL::midpoint(p1, p3);  // Μεσο της ακμής p1-p3
+            return CGAL::midpoint(p1, p3);  
         } else {
-            return CGAL::midpoint(p1, p2);  // Μεσο της ακμής p1-p2
+            return CGAL::midpoint(p1, p2); 
         }
     }
 
+    // This function attempts to flip an edge
     bool CDTProcessor::tryEdgeFlipping(CDT& cdt, CDT::Face_handle face) {
-        bool flipped = false;
+        bool flipped = false; //flag init to false
 
-        // Ελέγχουμε όλες τις ακμές του τριγώνου
+        // Checking all the edges of the triangle
         for (int index = 0; index < 3; ++index) {
-            CDT::Face_handle opposite_face = face->neighbor(index);
+            CDT::Face_handle opposite_face = face->neighbor(index); // Opposite triangle
 
-            // Αγνοούμε τις περιορισμένες ακμές
+            // Ignore the constrained edges
             if (cdt.is_constrained(CDT::Edge(face, index))) {
                 continue;
             }
 
-            // Ελέγχουμε αν υπάρχει γειτονικό τρίγωνο και αν η ακμή είναι εσωτερική
+            // Checking if there is a neighboring triangle and if the edge is internal
             if (cdt.is_infinite(face) || cdt.is_infinite(opposite_face)) continue;
 
-            // Παίρνουμε τις κορυφές του τριγώνου και του γειτονικού
+            //Get the vertices of the triangle and the neighboring triangle
             auto p1 = face->vertex(cdt.ccw(index))->point();
             auto p2 = face->vertex(cdt.cw(index))->point();
             auto p3 = face->vertex(index)->point();
 
-            // Αν το τρίγωνο είναι αμβλυγώνιο, ελέγχουμε για flip
+            //If the triangle is obtuse check for a flip 
             if (isObtuseTriangle(p1, p2, p3)) {
-                // Χρησιμοποιούμε τη συνάρτηση is_flippable της CDT για να ελέγξουμε αν το flip είναι δυνατό
+                // Use the function is_flippable from CDT to check if the flip is possible
+                //is flipable will always return false!!
                 bool isFlipable=cdt.is_flipable(face, index);
-                if (isFlipable) { // Η σωστή κλήση με 2 ορίσματα
+                if (isFlipable) { 
                     try {
-                        cdt.flip(face, index);
+                        cdt.flip(face, index); //try to flip
                         flipped = true;
                         std::cout << "Flip επιτυχές!" << std::endl;
                         break;
@@ -336,94 +367,101 @@ namespace Triangulation {
                 }
             }
         }
-        return flipped;
+        return flipped; //Return is a flip occured or not 
     }
 
-    // Συνάρτηση για την οπτικοποίηση της τριγωνοποίησης
+    // This function is used to visulize the given triangulation
     void CDTProcessor::visualizeTriangulation(const CDT& cdt) {
+        //Store triangulated points
         std::vector<std::pair<double, double>> triangulated_points;
         for (auto fit = cdt.finite_faces_begin(); fit != cdt.finite_faces_end(); ++fit) {
+            //Take the vertexes
             auto p1 = fit->vertex(0)->point();
             auto p2 = fit->vertex(1)->point();
             auto p3 = fit->vertex(2)->point();
+            //Store the vertexes
             triangulated_points.push_back({p1.x(), p1.y()});
             triangulated_points.push_back({p2.x(), p2.y()});
             triangulated_points.push_back({p3.x(), p3.y()});
         }
-        // Εμφάνιση της τριγωνοποίησης (μέσω της υλοποίησης visualizePoints)
+        // Display the triangulation using the function visualizePoints implemented in graphics
         visualizePoints(triangulated_points, constraints_);
     }
 
+    // This function calculates the incenter of a triangle
     Point CDTProcessor::calculate_incenter(const Point& a, const Point& b, const Point& c) {
-        // Υπολογισμός των αποστάσεων A, B, C
+        //Calculating the distances between the points
         double A = CGAL::squared_distance(b, c);
         double B = CGAL::squared_distance(a, c);
         double C = CGAL::squared_distance(a, b);
 
-        // Υπολογισμός των συντεταγμένων του incenter
+        // Calculating the coordinates of the incenter
         double Ix = (A * a.x() + B * b.x() + C * c.x()) / (A + B + C);
         double Iy = (A * a.y() + B * b.y() + C * c.y()) / (A + B + C);
 
-        return Point(Ix, Iy);
+        return Point(Ix, Iy); //Return the incenter 
     }
 
+    //This function finds a point that lies on the perpendicular bisector of the line segment connecting two points a and b
     Point CDTProcessor::calculate_perpendicular_bisector_point(const Point& a, const Point& b, const Point& c) {
-        // Υπολογισμός του μέσου της πλευράς a-b
+        // Calculate the midpoint of edge a-b
         double mx = (a.x() + b.x()) / 2;
         double my = (a.y() + b.y()) / 2;
 
-        // Υπολογισμός της κλίσης της πλευράς a-b
+        // Calculate the slope of edge a-b
         double dx = b.x() - a.x();
         double dy = b.y() - a.y();
 
-        // Έλεγχος αν η πλευρά a-b είναι κάθετη (dx == 0)
+        // Check if edge a-b is vertical (dx == 0)
         if (dx == 0) {
-            // Αν η πλευρά είναι κάθετη, η κάθετος διχοτόμος θα είναι οριζόντια
-            return Point(mx, my + 1);  // Επιστρέφουμε ένα σημείο πάνω στην οριζόντια κάθετο διχοτόμο
+            // If the edge is vertical, the perpendicular bisector will be horizontal
+            return Point(mx, my + 1);  // Return a point above the horizontal perpendicular bisector
         }
 
-        // Κλίση της πλευράς a-b
+        // Slope of edge a-b
         double slope_ab = dy / dx;
 
-        // Κλίση της κάθετης διχοτόμου
-        double slope_perpendicular = -1 / slope_ab;
+        // Slope of the perpendicular bisector
+        double slope_perpendicular = -1 / slope_ab; // Inverse slope
 
-        // Μετατόπιση κατά μια αυθαίρετη απόσταση (π.χ. 1 μονάδα) για να βρούμε σημείο πάνω στη διχοτόμο
+        // Offset by an arbitrary distance  to find a point on the bisector
         double dx_perpendicular = 1 / sqrt(1 + slope_perpendicular * slope_perpendicular);
         double dy_perpendicular = slope_perpendicular * dx_perpendicular;
 
-        // Το νέο σημείο πάνω στην κάθετο διχοτόμο (μετατοπισμένο από το μέσο της πλευράς a-b)
+        // The new point on the perpendicular bisector
         return Point(mx + dx_perpendicular, my + dy_perpendicular);
     }   
 
-    // Συνάρτηση για τον υπολογισμό της κάθετης προβολής του σημείου p στο τρίγωνο
+    // This function computes the orthogonal projection of point p onto the triangle
     Point CDTProcessor::projectPointOntoTriangle(const Point& p, const Point& p1, const Point& p2, const Point& p3) {
-        // Υπολογισμός παραμέτρων για τις πλευρές του τριγώνου
+        // Calculate parametres for the sides of the triangle
         auto projectOntoLine = [](const Point& p, const Point& a, const Point& b) {
-            double ab_x = b.x() - a.x();
-            double ab_y = b.y() - a.y();
-            double ap_x = p.x() - a.x();
-            double ap_y = p.y() - a.y();
+            double ab_x = b.x() - a.x(); //Difference in x 
+            double ab_y = b.y() - a.y(); //Differnce in y
+            double ap_x = p.x() - a.x(); //Difference in x from point p to a
+            double ap_y = p.y() - a.y();//Difference in y from point p to a
 
-            double ab_squared = ab_x * ab_x + ab_y * ab_y;
-            if (ab_squared == 0) return a; // a και b είναι το ίδιο σημείο
+            double ab_squared = ab_x * ab_x + ab_y * ab_y;// Squared length of edge ab
+            if (ab_squared == 0) return a; // a and b are the same point
 
-            // Υπολογισμός του κλάσματος
+            // Calculate the fraction
             double t = (ap_x * ab_x + ap_y * ab_y) / ab_squared;
-            t = std::max(0.0, std::min(1.0, t)); // περιορισμός του t στο [0, 1]
+            t = std::max(0.0, std::min(1.0, t)); // to [0,1]
 
             return Point(a.x() + t * ab_x, a.y() + t * ab_y);
         };
 
-        // Υπολογισμός της κάθετης προβολής για κάθε πλευρά του τριγώνου
+        // Calculate the orthogonal projection onto each side of the triangle
         Point proj1 = projectOntoLine(p, p1, p2);
         Point proj2 = projectOntoLine(p, p2, p3);
         Point proj3 = projectOntoLine(p, p3, p1);
 
+        // Calculate distances to each projection point
         double dist1 = std::sqrt((p.x() - proj1.x()) * (p.x() - proj1.x()) + (p.y() - proj1.y()) * (p.y() - proj1.y()));
         double dist2 = std::sqrt((p.x() - proj2.x()) * (p.x() - proj2.x()) + (p.y() - proj2.y()) * (p.y() - proj2.y()));
         double dist3 = std::sqrt((p.x() - proj3.x()) * (p.x() - proj3.x()) + (p.y() - proj3.y()) * (p.y() - proj3.y()));
 
+        //Find the closes projection and return that point
         if (dist1 <= dist2 && dist1 <= dist3) {
             return proj1;
         } else if (dist2 <= dist1 && dist2 <= dist3) {
@@ -433,56 +471,55 @@ namespace Triangulation {
         }
     }
 
+    // This function creates a JSON object for output
     json::object CDTProcessor::createOutputJson(const std::string& instance_uid,const std::vector<std::pair<double, double>>& steiner_points,const std::vector<std::pair<int, int>>& edges) {
-        // Δημιουργούμε το βασικό αντικείμενο JSON
-        json::object output;
+        json::object output; //create the main JSON object
 
-        // Προσθέτουμε το "content_type"
+        // Add those fields
         output["content_type"] = "CG_SHOP_2025_Solution";
-
-        // Προσθέτουμε το "instance_uid"
         output["instance_uid"] = instance_uid;
 
-        // Προετοιμασία για τις συντεταγμένες των Steiner points (x και y)
+        // Arrays to store the coordinates of steiner_points
         json::array steiner_points_x;
         json::array steiner_points_y;
 
+        // Loop through each Steiner point and add its coordinates to the JSON arrays
         for (const auto& point : steiner_points) {
-            steiner_points_x.push_back(point.first);  // Συντεταγμένες x
-            steiner_points_y.push_back(point.second); // Συντεταγμένες y
+            steiner_points_x.push_back(point.first);  
+            steiner_points_y.push_back(point.second);
         }
 
-        // Προσθέτουμε τις συντεταγμένες στο output JSON
+        // Add the coordinates to the output JSON
         output["steiner_points_x"] = steiner_points_x;
         output["steiner_points_y"] = steiner_points_y;
 
-        // Προετοιμασία για τις ακμές
+        // Array to store the edges
         json::array edges_array;
 
+        // Loop through each edge and create a pair of indices
         for (const auto& edge : edges) {
-            // Για κάθε ακμή, δημιουργούμε ένα ζεύγος δεικτών
+            // Create an array for each edge
             json::array edge_array;
             edge_array.push_back(edge.first);
             edge_array.push_back(edge.second);
-            edges_array.push_back(edge_array);
+            edges_array.push_back(edge_array); //Add the edge to the edges array
         }
 
-        // Προσθέτουμε τις ακμές στο output JSON
+        // Add the edges to the output JSON
         output["edges"] = edges_array;
 
         return output;
     }
 
+    // This function prints the output JSON to the console
     void CDTProcessor::printOutputJson(const json::object& output_json) {
-        std::cout << "{\n";  // Ξεκινάμε την εκτύπωση του JSON
+        std::cout << "{\n";  
 
-        // Εκτύπωση του content_type
+        // Prints
         std::cout << " \"content_type\": " << output_json.at("content_type").as_string() << ",\n";
-        
-        // Εκτύπωση του instance_uid
         std::cout << " \"instance_uid\": " << output_json.at("instance_uid").as_string() << ",\n";
 
-        // Εκτύπωση των steiner_points_x
+        //Print x coordinates of steiner points
         std::cout << " \"steiner_points_x\": [";
         const auto& steiner_points_x = output_json.at("steiner_points_x").as_array();
         for (size_t i = 0; i < steiner_points_x.size(); ++i) {
@@ -492,12 +529,12 @@ namespace Triangulation {
                 std::cout << steiner_points_x[i].as_double();
             }
             if (i < steiner_points_x.size() - 1) {
-                std::cout << ", ";  // Προσθήκη κόμματος αν δεν είναι το τελευταίο στοιχείο
+                std::cout << ", "; 
             }
         }
         std::cout << "],\n";
 
-        // Εκτύπωση των steiner_points_y
+        //Print y coordinates of steiner points
         std::cout << " \"steiner_points_y\": [";
         const auto& steiner_points_y = output_json.at("steiner_points_y").as_array();
         for (size_t i = 0; i < steiner_points_y.size(); ++i) {
@@ -507,12 +544,12 @@ namespace Triangulation {
                 std::cout << steiner_points_y[i].as_double();
             }
             if (i < steiner_points_y.size() - 1) {
-                std::cout << ", ";  // Προσθήκη κόμματος αν δεν είναι το τελευταίο στοιχείο
+                std::cout << ", ";  
             }
         }
         std::cout << "],\n";
 
-        // Εκτύπωση των edges
+        // Print edges
         std::cout << " \"edges\": [\n";
         const auto& edges = output_json.at("edges").as_array();
         for (size_t i = 0; i < edges.size(); ++i) {
@@ -520,12 +557,12 @@ namespace Triangulation {
             std::cout << "  [";
             std::cout << edge_array[0].as_int64() << ", " << edge_array[1].as_int64() << "]";
             if (i < edges.size() - 1) {
-                std::cout << ",\n";  // Προσθήκη κόμματος αν δεν είναι το τελευταίο στοιχείο
+                std::cout << ",\n";  
             }
         }
-        std::cout << "\n ]\n"; // Κλείνουμε την εκτύπωση των edges
+        std::cout << "\n ]\n"; 
 
-        std::cout << "}\n"; // Κλείνουμε το JSON
+        std::cout << "}\n";
    
     }
 
