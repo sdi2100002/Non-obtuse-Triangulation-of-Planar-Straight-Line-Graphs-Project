@@ -1,5 +1,6 @@
 #ifndef TRIANGULATION_H
 #define TRIANGULATION_H
+#define BOOST_ALLOW_DEPRECATED_HEADERS
 
 #include <vector>
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>

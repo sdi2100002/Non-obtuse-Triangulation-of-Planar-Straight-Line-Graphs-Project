@@ -1,8 +1,10 @@
+#define BOOST_ALLOW_DEPRECATED_HEADERS
 #include "triangulation.h"
 #include "../graphics/graphics.h"  // Assuming the visualizePoints function is in the graphics folder
 #include <cmath>
 #include <iostream>
 #include <CGAL/algorithm.h>
+#include <CGAL/draw_triangulation_2.h>
 #include <utility>
 
 namespace Triangulation {
@@ -199,7 +201,7 @@ namespace Triangulation {
         std::cout << "Αμβλυγώνια τρίγωνα μετά την επεξεργασία: " << obtuse_before << std::endl;
 
         //Visulize the final triangulation
-        visualizeTriangulation(cdt);
+        CGAL::draw(cdt);
     }
 
     //This function checks if a given point lies inside the region boundary 
