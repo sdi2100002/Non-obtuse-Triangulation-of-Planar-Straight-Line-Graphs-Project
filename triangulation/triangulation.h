@@ -82,6 +82,21 @@ namespace Triangulation {
         
         // This function prints the output JSON to the console
         void printOutputJson(const json::object& output_json);
+
+        //This function processes all convex polygons in the CDT 
+        void processConvexPolygon(CDT& cdt);
+
+        //This function calculates the centroid of a set of points
+        Point calculateCentroid(const std::vector<Point>& points);
+
+        //This function determines whether a given face in the CDT contains any constrained edges
+        bool hasConstrainedEdge(CDT::Face_handle face, const CDT& cdt);
+
+        //This function checks if a given vertex is part of any constrained edge in the CDT
+        bool isVertexOnConstrainedEdge(CDT::Vertex_handle vertex, const CDT& cdt);
+
+        //This function ensures that a given set of points forms a convex polygon by computing the convex hull
+        std::vector<Point> ensureConvexPolygon(const std::vector<Point>& points);
     };
 }
 

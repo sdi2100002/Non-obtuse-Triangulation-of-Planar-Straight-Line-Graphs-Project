@@ -6,6 +6,7 @@
 #include <CGAL/algorithm.h>
 #include <CGAL/draw_triangulation_2.h>
 #include <utility>
+#include "../CGAL-5.6.1/include/CGAL/convex_hull_2.h"
 
 namespace Triangulation {
 
@@ -58,6 +59,101 @@ namespace Triangulation {
         return obtuse_count;
     }
 
+    //This function calculates the centroid of a set of points
+    Point CDTProcessor::calculateCentroid(const std::vector<Point>& points) {
+        double x_sum = 0.0, y_sum = 0.0;
+        for (const auto& point : points) {
+            x_sum += point.x();
+            y_sum += point.y();
+        }
+        return Point(x_sum / points.size(), y_sum / points.size());
+    }
+
+    //This function determines whether a given face in the CDT contains any constrained edges
+    bool CDTProcessor::hasConstrainedEdge(CDT::Face_handle face, const CDT& cdt) {
+        for (int i = 0; i < 3; ++i) {
+            if (cdt.is_constrained(std::make_pair(face, i))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    //This function checks if a given vertex is part of any constrained edge in the CDT
+    bool CDTProcessor::isVertexOnConstrainedEdge(CDT::Vertex_handle vertex, const CDT& cdt) {
+        CDT::Face_circulator fc_start = cdt.incident_faces(vertex), fc = fc_start;
+        do {
+            for (int i = 0; i < 3; ++i) {
+                if (cdt.is_constrained(std::make_pair(fc, i)) &&
+                    (fc->vertex(i) == vertex || fc->vertex((i + 1) % 3) == vertex)) {
+                    return true;
+                }
+            }
+        } while (++fc != fc_start);
+        return false;
+    }
+
+    //This function ensures that a given set of points forms a convex polygon by computing the convex hull
+    std::vector<Point> CDTProcessor::ensureConvexPolygon(const std::vector<Point>& points) {
+        std::vector<Point> convex_hull_points;
+        CGAL::convex_hull_2(points.begin(), points.end(), std::back_inserter(convex_hull_points));
+        return convex_hull_points;
+    }
+
+    void CDTProcessor::processConvexPolygon(CDT& cdt) {
+        std::vector<CDT::Face_handle> obtuse_faces;
+
+        //Find all obtuse triangles without constrained edges and save them for processing
+        for (auto fit = cdt.finite_faces_begin(); fit != cdt.finite_faces_end(); ++fit) {
+            if (isObtuseTriangle(fit->vertex(0)->point(), fit->vertex(1)->point(), fit->vertex(2)->point()) 
+                && !hasConstrainedEdge(fit, cdt)) {
+                obtuse_faces.push_back(fit);
+            }
+        }
+
+        //Group obtuse triangles into convex polygons
+        for (const auto& face : obtuse_faces) {
+            std::vector<Point> polygon_points;
+            std::vector<CDT::Vertex_handle> non_constrained_vertices;
+
+            //Find vertices that are not part of constrained edges
+            for (int i = 0; i < 3; ++i) {
+                auto vertex = face->vertex(i);
+                if (!isVertexOnConstrainedEdge(vertex, cdt)) {
+                    non_constrained_vertices.push_back(vertex);
+                    polygon_points.push_back(vertex->point());
+                }
+            }
+
+            //Make sure that the collected points form a convex polygon
+            polygon_points = ensureConvexPolygon(polygon_points);
+            if (polygon_points.size() < 3) continue; //Skip if its not
+
+            //Calculate the centroid of the polygon and use it as a Steiner point
+            Point centroid = calculateCentroid(polygon_points);
+
+            //Remove vertices that are not part of constrained edges from the CDT
+            for (const auto& vertex : non_constrained_vertices) {
+                cdt.remove(vertex);
+            }
+
+            //Insert constraint edges around the convex polygon to retain its shape
+            std::vector<CDT::Vertex_handle> polygon_vertices;
+            for (size_t i = 0; i < polygon_points.size(); ++i) {
+                auto v1 = cdt.insert(polygon_points[i]);
+                polygon_vertices.push_back(v1);
+                auto v2 = cdt.insert(polygon_points[(i + 1) % polygon_points.size()]);
+                cdt.insert_constraint(v1, v2);
+            }
+
+            //Insert the centroid as a new vertex and connect it with constraint edges to the polygon's vertices
+            auto centroid_vertex = cdt.insert(centroid);
+            for (const auto& v : polygon_vertices) {
+                cdt.insert_constraint(centroid_vertex, v);
+            }
+        }
+    }
+
     //This is the Main function to process the triangulation 
     void CDTProcessor::processTriangulation() {
         CDT cdt;
@@ -84,6 +180,8 @@ namespace Triangulation {
         int max_iter = 100; //var to store max number of loops
         int iterations = 0; //var to store loops done
         bool hasObtuse = true;  //there is at least one more obtuse triangle 
+
+        processConvexPolygon(cdt);
 
         //Main loop to perform the process that reduces the obtuses triangles 
         //While there is at least one obtuse triangle and we haven't reach the number of max iterations
@@ -173,7 +271,9 @@ namespace Triangulation {
                 steiner_points.push_back({best_steiner_point.x(),best_steiner_point.y()});
                 obtuse_before = best_obtuse_after_sim;
                 std::cout << "Προσθήκη Steiner point βελτίωσε την κατάσταση. Αμβλυγώνια τρίγωνα: " << obtuse_before << std::endl;
+                
             }
+            processConvexPolygon(cdt);
             iterations++;
         }
 
