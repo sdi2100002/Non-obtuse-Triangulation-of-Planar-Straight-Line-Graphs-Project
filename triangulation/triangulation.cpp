@@ -10,8 +10,8 @@
 namespace Triangulation {
 
     // Constructor 
-    CDTProcessor::CDTProcessor(const std::vector<std::pair<double, double>>& points, const std::vector<std::pair<int, int>>& constraints, const std::vector<int>& region_boundary,const std::string& instance_uid) 
-        : points_(points), constraints_(constraints), region_boundary_(region_boundary) , instance_uid_(instance_uid) {
+    CDTProcessor::CDTProcessor(const std::vector<std::pair<double, double>>& points, const std::vector<std::pair<int, int>>& constraints, const std::vector<int>& region_boundary,const std::string& instance_uid,const std::string& method,const std::map<std::string,double>& parameters) 
+        : points_(points), constraints_(constraints), region_boundary_(region_boundary) , instance_uid_(instance_uid) , method_(method) , parameters_(parameters) {
     
         //Adding the boundary constraints (the region boundary is treated as a contraint)
         for (size_t i = 0; i < region_boundary_.size(); ++i) {

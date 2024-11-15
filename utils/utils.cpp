@@ -128,7 +128,7 @@ void retrieveFields(
     std::vector<std::pair<int, int>> &additional_constraints,
     std::vector<int> &region_boundary,
     std::string &method,
-    object &parameters,
+    std::map<std::string,double> &parameters,
     bool &delaunay
 ) {
     // Ανακτά το instance_uid
@@ -165,7 +165,19 @@ void retrieveFields(
     method = obj.at("method").as_string().c_str();
 
     // Ανακτά τις παραμέτρους
-    parameters = obj.at("parameters").as_object();
+    const auto& params_obj = obj.at("parameters").as_object();
+    for (const auto& param : params_obj) {
+        // Use std::string(param.key()) to convert key to std::string
+        std::string key = std::string(param.key());
+
+        // Ensure the value is numeric (double or int)
+        if (param.value().is_double()) {
+            parameters[key] = param.value().as_double();
+        } else if (param.value().is_int64()) {
+            parameters[key] = static_cast<double>(param.value().as_int64());
+        }
+    }
+    
 
     // Ανακτά την τιμή του delaunay
     delaunay = obj.at("delaunay").as_bool();
@@ -183,10 +195,12 @@ std::vector<std::pair<double, double>> createPointsVector(const std::vector<int>
 }
 
 // This function is used to process triangulation using the specified points and constraints
-void CallprocessTriangulation(const std::vector<std::pair<double, double>>& points, const std::vector<std::pair<int, int>>& additional_constraints, const std::vector<int>& region_boundary, const std::string& instance_uid) {
+void CallprocessTriangulation(const std::vector<std::pair<double, double>>& points, const std::vector<std::pair<int, int>>& additional_constraints, const std::vector<int>& region_boundary, const std::string& instance_uid,const std::string& method,const std::map<std::string, double>& parameters , bool delaunay) {
     // Create a CDTProcessor instance with the given points, constraints, boundary, and instance UID
-    Triangulation::CDTProcessor cdtProcessor(points, additional_constraints, region_boundary, instance_uid);
+    Triangulation::CDTProcessor cdtProcessor(points, additional_constraints, region_boundary, instance_uid, method, parameters);
     // Call the main process which we are using to perform triangulation
-    cdtProcessor.processTriangulation();
+    if(delaunay){
+        cdtProcessor.processTriangulation();
+    }
 }
 
