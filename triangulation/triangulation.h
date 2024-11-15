@@ -35,9 +35,6 @@ namespace Triangulation {
         std::vector<int> region_boundary_; 
         std::string instance_uid_; 
 
-        // This function is used to visulize the given triangulation
-        void visualizeTriangulation(const CDT& cdt);
-
         // This function checks if the point pt is on the line segment formed by points p1 and p2
         bool isPointOnSegment(const std::pair<double, double>& pt, const std::pair<double, double>& p1, const std::pair<double, double>& p2);
 

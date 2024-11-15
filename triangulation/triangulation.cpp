@@ -1,6 +1,5 @@
 #define BOOST_ALLOW_DEPRECATED_HEADERS
 #include "triangulation.h"
-#include "../graphics/graphics.h"  // Assuming the visualizePoints function is in the graphics folder
 #include <cmath>
 #include <iostream>
 #include <CGAL/algorithm.h>
@@ -470,24 +469,6 @@ namespace Triangulation {
             }
         }
         return flipped; //Return is a flip occured or not 
-    }
-
-    // This function is used to visulize the given triangulation
-    void CDTProcessor::visualizeTriangulation(const CDT& cdt) {
-        //Store triangulated points
-        std::vector<std::pair<double, double>> triangulated_points;
-        for (auto fit = cdt.finite_faces_begin(); fit != cdt.finite_faces_end(); ++fit) {
-            //Take the vertexes
-            auto p1 = fit->vertex(0)->point();
-            auto p2 = fit->vertex(1)->point();
-            auto p3 = fit->vertex(2)->point();
-            //Store the vertexes
-            triangulated_points.push_back({p1.x(), p1.y()});
-            triangulated_points.push_back({p2.x(), p2.y()});
-            triangulated_points.push_back({p3.x(), p3.y()});
-        }
-        // Display the triangulation using the function visualizePoints implemented in graphics
-        visualizePoints(triangulated_points, constraints_);
     }
 
     // This function calculates the incenter of a triangle

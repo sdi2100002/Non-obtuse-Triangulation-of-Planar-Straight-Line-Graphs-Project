@@ -37,7 +37,6 @@ set(SOURCES
     firstp.cpp
     ./triangulation/triangulation.cpp
     ./utils/utils.cpp
-    ./graphics/graphics.cpp
     # ./utilsAlgo/utilsAlgo.cpp
 )
 
