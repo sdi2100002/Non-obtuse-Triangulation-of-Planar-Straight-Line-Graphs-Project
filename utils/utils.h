@@ -1,3 +1,4 @@
+#define BOOST_ALLOW_DEPRECATED_HEADERS
 #ifndef UTILS_H
 #define UTILS_H
 
@@ -16,7 +17,19 @@ bool loadJsonFile(const std::string& filename, std::string& output);
 object parseJson(const std::string& input);
 
 // This function is used to retrieve various fields from the parsed JSON object
-void retrieveFields(const object& obj, std::string& instance_uid, int& num_points, std::vector<int>& points_x, std::vector<int>& points_y,int& num_constraints, std::vector<std::pair<int, int>>& additional_constraints,std::vector<int>& region_boundary);
+void retrieveFields(
+    const object &obj,
+    std::string &instance_uid,
+    int &num_points,
+    std::vector<int> &points_x,
+    std::vector<int> &points_y,
+    int &num_constraints,
+    std::vector<std::pair<int, int>> &additional_constraints,
+    std::vector<int> &region_boundary,
+    std::string &method,
+    object &parameters,
+    bool &delaunay
+);
 
 // This function is used to create a vector of points from points_x and points_y arrays
 std::vector<std::pair<double, double>> createPointsVector(const std::vector<int>& points_x, const std::vector<int>& points_y);

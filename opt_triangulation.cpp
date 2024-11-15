@@ -7,7 +7,7 @@
 #include <QApplication>
 #include <iostream>
 #include <boost/json/src.hpp>
-#include "triangulation/triangulation.h"  // Use the typedef defined in triangulation.h
+#include "triangulation/triangulation.h" 
 #include "utils/utils.h"
 
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
@@ -17,14 +17,31 @@ using namespace boost::json;
 
 
 int main(int argc, char *argv[]) {
-    // Create the QApplication instance
-    // QApplication app(argc, argv);
+
+    std::cout<<"argc "<<argc<<std::endl;
+    if(argc<5){
+        std::cerr << "Usage: " << argv[0] << "-i /path/to/input.json -o /path/to/output.json" << std::endl;
+        return 1;
+    }
+
+    std::string inputPath,outputPath;
+
+    for (int i = 1; i < argc; i += 2) {
+        std::string flag(argv[i]);
+        if (flag == "-i") {
+            inputPath = argv[i + 1];
+        } else if (flag == "-o") {
+            outputPath = argv[i + 1];
+        }
+    
+    }
 
     // Load the JSON data from the input.json file
     std::string jsonData;
-    if (!loadJsonFile("../input.json", jsonData)) {
+    if (!loadJsonFile(inputPath, jsonData)) {
         return 1;
     }
+
 
     // Parse the JSON data into a JSON object
     object obj = parseJson(jsonData);
@@ -39,9 +56,13 @@ int main(int argc, char *argv[]) {
     int num_constraints;
     std::vector<std::pair<int, int>> additional_constraints;
     std::vector<int> region_boundary;
+    std::string method;
+    object parameters;
+    bool delaunay;
+
 
     // Retrieve necessary fields from the JSON object into the declared variables
-    retrieveFields(obj, instance_uid, num_points, points_x, points_y, num_constraints, additional_constraints, region_boundary);
+    retrieveFields(obj, instance_uid, num_points, points_x, points_y, num_constraints, additional_constraints, region_boundary,method,parameters,delaunay);
 
     // Create a CGAL constrained Delaunay triangulation instance
     CDT cdt;

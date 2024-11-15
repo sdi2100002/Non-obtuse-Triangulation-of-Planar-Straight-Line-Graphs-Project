@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 3.1...3.23)
 
 # Project name and language
-project(test LANGUAGES CXX)
+project(opt_triangulation LANGUAGES CXX)
 
 # Find and include CGAL
 set(CGAL_DIR ../lib/CGAL-5.6.1/build)
@@ -34,7 +34,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
 # Source files
 set(SOURCES
-    firstp.cpp
+    opt_triangulation.cpp
     ./triangulation/triangulation.cpp
     ./utils/utils.cpp
     # ./utilsAlgo/utilsAlgo.cpp
