@@ -28,6 +28,8 @@ namespace Triangulation {
         //This is the Main function to process the triangulation 
         void processTriangulation();
 
+        void selectMethod(const std::string& method,const std::map<std::string, double>& parameters);
+
     private:
         //Variables to store the points , constraints , region boundary and instance uid
         std::vector<std::pair<double, double>> points_;

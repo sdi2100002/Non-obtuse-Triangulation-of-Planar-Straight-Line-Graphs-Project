@@ -202,5 +202,8 @@ void CallprocessTriangulation(const std::vector<std::pair<double, double>>& poin
     if(delaunay){
         cdtProcessor.processTriangulation();
     }
+    else{
+        cdtProcessor.selectMethod(method,parameters);
+    }
 }
 

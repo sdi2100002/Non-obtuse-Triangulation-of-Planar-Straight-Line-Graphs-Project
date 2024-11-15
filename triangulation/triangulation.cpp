@@ -301,6 +301,8 @@ namespace Triangulation {
 
         //Visulize the final triangulation
         CGAL::draw(cdt);
+
+        selectMethod(method_,parameters_);
     }
 
     //This function checks if a given point lies inside the region boundary 
@@ -648,6 +650,51 @@ namespace Triangulation {
         std::cout << "}\n";
    
     }
+
+    void CDTProcessor::selectMethod(const std::string& method,const std::map<std::string, double>& parameters){
+        if (method == "local") {
+            std::cout << "Selected method: Local Search\n";
+            // std::cout << "Parameters:\n";
+            // for (const auto& [key, value] : parameters) {
+            //     std::cout << "  " << key << ": " << value << "\n";
+            // }
+            // // Placeholder for local search logic
+            // std::cout << "Executing local search...\n";
+        } 
+        else if (method == "sa") { // Simulated Annealing
+            std::cout << "Selected method: Simulated Annealing\n";
+            // std::cout << "Parameters:\n";
+            // for (const auto& [key, value] : parameters) {
+            //     std::cout << "  " << key << ": " << value << "\n";
+            // }
+            // // Placeholder for simulated annealing logic
+            // std::cout << "Executing simulated annealing...\n";
+        } 
+        else if (method == "ant") { // Ant Colony Optimization
+            std::cout << "Selected method: Ant Colony Optimization\n";
+            // std::cout << "Parameters:\n";
+            // for (const auto& [key, value] : parameters) {
+            //     std::cout << "  " << key << ": " << value << "\n";
+            // }
+            // // Placeholder for ant colony optimization logic
+            // std::cout << "Executing ant colony optimization...\n";
+        } 
+        else {
+            // Handle invalid method input
+            std::cerr << "Error: Unknown method \"" << method << "\".\n";
+            std::cerr << "Available methods: local, sa, ant\n";
+        }
+    }
+
+
+
+
+
+
+
+
+
+
 
 
 }
