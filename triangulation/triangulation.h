@@ -28,7 +28,7 @@ namespace Triangulation {
         //This is the Main function to process the triangulation 
         void processTriangulation();
 
-        void selectMethod(const CDT &cdt, const std::string& method,const std::map<std::string, double>& parameters);
+        void selectMethod(CDT &cdt, const std::string& method,const std::map<std::string, double>& parameters);
 
         CDT createCDT();
 
@@ -101,7 +101,7 @@ namespace Triangulation {
         //This function ensures that a given set of points forms a convex polygon by computing the convex hull
         std::vector<Point> ensureConvexPolygon(const std::vector<Point>& points);
 
-        void localSearch(CDT cdt, double L);
+        void localSearch(CDT& cdt, double L);
 
         
     };

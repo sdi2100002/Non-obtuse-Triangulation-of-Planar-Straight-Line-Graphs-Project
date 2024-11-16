@@ -651,7 +651,7 @@ namespace Triangulation {
    
     }
 
-    void CDTProcessor::selectMethod(const CDT &cdt, const std::string& method,const std::map<std::string, double>& parameters){
+    void CDTProcessor::selectMethod(CDT &cdt, const std::string& method,const std::map<std::string, double>& parameters){
         if (method == "local") {
             std::cout << "Selected method: Local Search\n";
             std::cout << "Parameters:\n";
@@ -691,17 +691,19 @@ namespace Triangulation {
 
 
 
-    void CDTProcessor::localSearch(CDT cdt, double L) {
+    void CDTProcessor::localSearch(CDT& cdt, double L) {
         int counter = 0;
         bool hasObtuse = true;
 
         int obtuseCount = countObtuseTriangles(cdt);
-        int newL = (int)L;
+        int newL = static_cast<int>(L);
 
 
         while (hasObtuse && counter < newL) {
             hasObtuse = false;  
             int current_obtuse_count = countObtuseTriangles(cdt);
+
+            std::vector<CDT::Face_handle> obtuse_triangles;
 
             
             for (auto fit = cdt.finite_faces_begin(); fit != cdt.finite_faces_end(); ++fit) {
@@ -723,63 +725,76 @@ namespace Triangulation {
 
                 if (isObtuseTriangle(p1, p2, p3)) {
                     hasObtuse = true;  
-                    CDT best_T = cdt;  
-                    int best_obtuse_count = current_obtuse_count;
-
-                    // Evaluate Steiner point options
-                    for (int strategy = 0; strategy <= 5; ++strategy) {
-                        Point steiner_point;
-                        if (strategy == 0) {
-                            steiner_point = CGAL::circumcenter(p1, p2, p3);
-                        } else if (strategy == 1) {
-                            steiner_point = calculate_incenter(p1, p2, p3);
-                        } else if (strategy == 2) {
-                            steiner_point = getMidpointOfLongestEdge(p1, p2, p3); 
-                        } else if (strategy == 3) {
-                            steiner_point = CGAL::centroid(p1, p2, p3);
-                        } else if (strategy == 4) {
-                            steiner_point = calculate_perpendicular_bisector_point(p1, p2, p3); 
-                        } else if (strategy == 5) {
-                            CGAL::Point_2<CGAL::Epick> p;  // Dummy point for projection
-                            steiner_point = projectPointOntoTriangle(p, p1, p2, p3);  // Projected point
-                        }
-
-                        // Skip invalid Steiner points
-                        if (!CGAL::is_finite(steiner_point.x()) || !CGAL::is_finite(steiner_point.y())) {
-                            continue;
-                        }
-
-                        // Skip Steiner points outside the boundary
-                        if (!isPointInsideBoundary(
-                                std::make_pair(steiner_point.x(), steiner_point.y()),
-                                region_boundary_, points_)) {
-                            continue;
-                        }
-
-                        // Simulate inserting the Steiner point and re-triangulate locally
-                        CDT new_cdt = cdt;  
-                        auto new_vertex = new_cdt.insert(steiner_point);
-                        processConvexPolygon(new_cdt);  
-
-                        // Count obtuse triangles in the new triangulation
-                        int obtuse_count_new = countObtuseTriangles(new_cdt);
-
-                        // Update the best triangulation if this option improves the obtuse count
-                        if (obtuse_count_new < best_obtuse_count) {
-                            best_T = new_cdt;  
-                            best_obtuse_count = obtuse_count_new;
-                        }
-                    }
-
-                    // Apply the best triangulation found for this obtuse triangle
-                    cdt = best_T;
-                    current_obtuse_count = best_obtuse_count;
+                    obtuse_triangles.push_back(fit);
                 }
             }
 
+            for (const auto& fit : obtuse_triangles){
+                auto p1 = fit->vertex(0)->point();
+                auto p2 = fit->vertex(1)->point();
+                auto p3 = fit->vertex(2)->point();
+
+                CDT best_cdt = cdt;  
+                int best_obtuse_count = current_obtuse_count;
+
+                // Evaluate Steiner point strategies
+                for (int strategy = 0; strategy <= 5; ++strategy) {
+                    Point steiner_point;
+
+                    // Generate Steiner points using different strategies
+                    if (strategy == 0) {
+                        steiner_point = CGAL::circumcenter(p1, p2, p3);
+                    } else if (strategy == 1) {
+                        steiner_point = calculate_incenter(p1, p2, p3);
+                    } else if (strategy == 2) {
+                        steiner_point = getMidpointOfLongestEdge(p1, p2, p3); 
+                    } else if (strategy == 3) {
+                        steiner_point = CGAL::centroid(p1, p2, p3);
+                    } else if (strategy == 4) {
+                        steiner_point = calculate_perpendicular_bisector_point(p1, p2, p3); 
+                    } else if (strategy == 5) {
+                        steiner_point = projectPointOntoTriangle(Point(0, 0), p1, p2, p3);
+                    }
+
+                    // Validate the Steiner point
+                    if (!CGAL::is_finite(steiner_point.x()) || !CGAL::is_finite(steiner_point.y())) {
+                        continue;
+                    }
+
+                    if (!isPointInsideBoundary(
+                            std::make_pair(steiner_point.x(), steiner_point.y()),
+                            region_boundary_, points_)) {
+                        continue;
+                    }
+
+                    // Simulate insertion of the Steiner point
+                    CDT new_cdt = cdt;  // Copy the current triangulation
+                    try {
+                        auto new_vertex = new_cdt.insert(steiner_point);
+                        processConvexPolygon(new_cdt);  // Ensure local re-triangulation
+                    } catch (const CGAL::Precondition_exception& e) {
+                        std::cerr << "Failed to insert Steiner point: " << e.what() << "\n";
+                        continue;
+                    }
+
+                    // Count obtuse triangles in the new triangulation
+                    int new_obtuse_count = countObtuseTriangles(new_cdt);
+
+                    // Keep the best triangulation
+                    if (new_obtuse_count < best_obtuse_count) {
+                        best_cdt = new_cdt;
+                        best_obtuse_count = new_obtuse_count;
+                    }
+                }
+
+                // Update the CDT to the best found triangulation
+                cdt = best_cdt;
+                current_obtuse_count = best_obtuse_count;
+
+            }
             counter++;
         }
-        std::cout << "Final obtuse triangle count: " << countObtuseTriangles(cdt) << "\n";
+        std::cout<<"Final obtuse triangles count : " << countObtuseTriangles(cdt) << std::endl;
         CGAL::draw(cdt);
     }
 
@@ -787,22 +802,19 @@ namespace Triangulation {
 
     CDT CDTProcessor::createCDT() {
         CDT cdt;
-        std::vector<std::pair<double, double>> steiner_points;
-        std::vector<std::pair<int, int>> edges; 
-
-
-        // Insert the points into the triangulation
-        std::vector<CDT::Vertex_handle> vertices;
-        for (size_t i = 0; i < points_.size(); ++i) {
-            vertices.push_back(cdt.insert(Point(points_[i].first, points_[i].second)));
-            vertices.back()->info() = i; //Vertex index for indentification
+        std::vector<Point> cgal_points;
+        
+        for (const auto& point : points_) {
+            cgal_points.emplace_back(point.first, point.second);
+            cdt.insert(cgal_points.back());
         }
 
-        //Insert the constraints (and the boundary constraints)
+        // Insert constraints into the CGAL triangulation
         for (const auto& constraint : constraints_) {
-            cdt.insert_constraint(vertices[constraint.first], vertices[constraint.second]);
+            cdt.insert_constraint(cgal_points[constraint.first], cgal_points[constraint.second]);
         }
 
+        CGAL::draw(cdt);
         return cdt;
     }
 
