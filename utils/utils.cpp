@@ -203,7 +203,8 @@ void CallprocessTriangulation(const std::vector<std::pair<double, double>>& poin
         cdtProcessor.processTriangulation();
     }
     else{
-        cdtProcessor.selectMethod(method,parameters);
+        CDT cdt = cdtProcessor.createCDT();
+        cdtProcessor.selectMethod(cdt, method, parameters);
     }
 }
 

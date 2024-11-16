@@ -302,7 +302,7 @@ namespace Triangulation {
         //Visulize the final triangulation
         CGAL::draw(cdt);
 
-        selectMethod(method_,parameters_);
+        selectMethod(cdt, method_,parameters_);
     }
 
     //This function checks if a given point lies inside the region boundary 
@@ -651,7 +651,7 @@ namespace Triangulation {
    
     }
 
-    void CDTProcessor::selectMethod(const std::string& method,const std::map<std::string, double>& parameters){
+    void CDTProcessor::selectMethod(const CDT &cdt, const std::string& method,const std::map<std::string, double>& parameters){
         if (method == "local") {
             std::cout << "Selected method: Local Search\n";
             std::cout << "Parameters:\n";
@@ -660,6 +660,9 @@ namespace Triangulation {
             }
             // Placeholder for local search logic
             std::cout << "Executing local search...\n";
+            auto iter = parameters.begin();
+            double value = iter->second;
+            localSearch(cdt, value);
         } 
         else if (method == "sa") { // Simulated Annealing
             std::cout << "Selected method: Simulated Annealing\n";
@@ -688,9 +691,120 @@ namespace Triangulation {
 
 
 
+    void CDTProcessor::localSearch(CDT cdt, double L) {
+        int counter = 0;
+        bool hasObtuse = true;
+
+        int obtuseCount = countObtuseTriangles(cdt);
+        int newL = (int)L;
+
+
+        while (hasObtuse && counter < newL) {
+            hasObtuse = false;  
+            int current_obtuse_count = countObtuseTriangles(cdt);
+
+            
+            for (auto fit = cdt.finite_faces_begin(); fit != cdt.finite_faces_end(); ++fit) {
+                // Skip triangles outside the region boundary
+                if (!isTriangleWithinBoundary(fit, region_boundary_)) {
+                    continue;
+                }
+
+                auto p1 = fit->vertex(0)->point();
+                auto p2 = fit->vertex(1)->point();
+                auto p3 = fit->vertex(2)->point();
+
+                // Skip triangles with invalid points
+                if (!CGAL::is_finite(p1.x()) || !CGAL::is_finite(p1.y()) ||
+                    !CGAL::is_finite(p2.x()) || !CGAL::is_finite(p2.y()) ||
+                    !CGAL::is_finite(p3.x()) || !CGAL::is_finite(p3.y())) {
+                    continue;
+                }
+
+                if (isObtuseTriangle(p1, p2, p3)) {
+                    hasObtuse = true;  
+                    CDT best_T = cdt;  
+                    int best_obtuse_count = current_obtuse_count;
+
+                    // Evaluate Steiner point options
+                    for (int strategy = 0; strategy <= 5; ++strategy) {
+                        Point steiner_point;
+                        if (strategy == 0) {
+                            steiner_point = CGAL::circumcenter(p1, p2, p3);
+                        } else if (strategy == 1) {
+                            steiner_point = calculate_incenter(p1, p2, p3);
+                        } else if (strategy == 2) {
+                            steiner_point = getMidpointOfLongestEdge(p1, p2, p3); 
+                        } else if (strategy == 3) {
+                            steiner_point = CGAL::centroid(p1, p2, p3);
+                        } else if (strategy == 4) {
+                            steiner_point = calculate_perpendicular_bisector_point(p1, p2, p3); 
+                        } else if (strategy == 5) {
+                            CGAL::Point_2<CGAL::Epick> p;  // Dummy point for projection
+                            steiner_point = projectPointOntoTriangle(p, p1, p2, p3);  // Projected point
+                        }
+
+                        // Skip invalid Steiner points
+                        if (!CGAL::is_finite(steiner_point.x()) || !CGAL::is_finite(steiner_point.y())) {
+                            continue;
+                        }
+
+                        // Skip Steiner points outside the boundary
+                        if (!isPointInsideBoundary(
+                                std::make_pair(steiner_point.x(), steiner_point.y()),
+                                region_boundary_, points_)) {
+                            continue;
+                        }
+
+                        // Simulate inserting the Steiner point and re-triangulate locally
+                        CDT new_cdt = cdt;  
+                        auto new_vertex = new_cdt.insert(steiner_point);
+                        processConvexPolygon(new_cdt);  
+
+                        // Count obtuse triangles in the new triangulation
+                        int obtuse_count_new = countObtuseTriangles(new_cdt);
+
+                        // Update the best triangulation if this option improves the obtuse count
+                        if (obtuse_count_new < best_obtuse_count) {
+                            best_T = new_cdt;  
+                            best_obtuse_count = obtuse_count_new;
+                        }
+                    }
+
+                    // Apply the best triangulation found for this obtuse triangle
+                    cdt = best_T;
+                    current_obtuse_count = best_obtuse_count;
+                }
+            }
+
+            counter++;
+        }
+        std::cout << "Final obtuse triangle count: " << countObtuseTriangles(cdt) << "\n";
+        CGAL::draw(cdt);
+    }
 
 
 
+    CDT CDTProcessor::createCDT() {
+        CDT cdt;
+        std::vector<std::pair<double, double>> steiner_points;
+        std::vector<std::pair<int, int>> edges; 
+
+
+        // Insert the points into the triangulation
+        std::vector<CDT::Vertex_handle> vertices;
+        for (size_t i = 0; i < points_.size(); ++i) {
+            vertices.push_back(cdt.insert(Point(points_[i].first, points_[i].second)));
+            vertices.back()->info() = i; //Vertex index for indentification
+        }
+
+        //Insert the constraints (and the boundary constraints)
+        for (const auto& constraint : constraints_) {
+            cdt.insert_constraint(vertices[constraint.first], vertices[constraint.second]);
+        }
+
+        return cdt;
+    }
 
 
 
