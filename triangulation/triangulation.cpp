@@ -5,6 +5,7 @@
 #include <CGAL/algorithm.h>
 #include <CGAL/draw_triangulation_2.h>
 #include <utility>
+#include <random>
 #include "../CGAL-5.6.1/include/CGAL/convex_hull_2.h"
 
 namespace Triangulation {
@@ -672,6 +673,16 @@ namespace Triangulation {
             }
             // Placeholder for simulated annealing logic
             std::cout << "Executing simulated annealing...\n";
+
+            // Extract parameters for Simulated Annealing
+            double alpha = (parameters.find("alpha") != parameters.end()) ? parameters.at("alpha") : 2.0;
+            double beta = (parameters.find("beta") != parameters.end()) ? parameters.at("beta") : 0.2;
+            int L = (parameters.find("L") != parameters.end()) ? static_cast<int>(parameters.at("L")) : 5000;
+
+        
+            std::cout << "Using alpha: " << alpha << ", beta: " << beta << ", L: " << L << "\n";
+
+            simulatedAnnealing(cdt,alpha,beta,L);
         } 
         else if (method == "ant") { // Ant Colony Optimization
             std::cout << "Selected method: Ant Colony Optimization\n";
@@ -688,8 +699,6 @@ namespace Triangulation {
             std::cerr << "Available methods: local, sa, ant\n";
         }
     }
-
-
 
     void CDTProcessor::localSearch(CDT& cdt, double L) {
         int counter = 0;
@@ -782,6 +791,7 @@ namespace Triangulation {
 
                     // Keep the best triangulation
                     if (new_obtuse_count < best_obtuse_count) {
+                        std::cout<<"Placed a steiner : " << steiner_point << std::endl ;
                         best_cdt = new_cdt;
                         best_obtuse_count = new_obtuse_count;
                     }
@@ -797,8 +807,6 @@ namespace Triangulation {
         std::cout<<"Final obtuse triangles count : " << countObtuseTriangles(cdt) << std::endl;
         CGAL::draw(cdt);
     }
-
-
 
     CDT CDTProcessor::createCDT() {
         CDT cdt;
@@ -819,6 +827,138 @@ namespace Triangulation {
     }
 
 
+    void CDTProcessor::simulatedAnnealing(CDT& cdt,double alpha,double beta,int L){
+        // Step 1: Compute initial energy of the triangulation
+        int countOfSteinerPoints=0;
+        double currentEnergy = calculateEnergy(cdt, alpha, beta ,countOfSteinerPoints);
+        std::cout << "Initial energy: " << currentEnergy << "\n";
+
+        // Step 2: Initialize temperature
+        double temperature = 1.0;
+        
+
+        // Step 3: Main SA loop
+        while (temperature >= 0) {
+            std::cout << "Current temperature: " << temperature << "\n";
+
+            std::vector<CDT::Face_handle> faces;
+            for (auto fit = cdt.finite_faces_begin();fit != cdt.finite_faces_end();++fit){
+                faces.push_back(fit);
+            }
+
+            
+            // Step 4: Iterate over all finite faces in the CDT
+            for (auto face : faces) {
+                
+                // Get the vertices of the triangle
+                auto p1 = face->vertex(0)->point();
+                auto p2 = face->vertex(1)->point();
+                auto p3 = face->vertex(2)->point();
+
+                // Compute squared edge lengths
+                double a2 = squaredDistance(p2, p3);
+                double b2 = squaredDistance(p1, p3);
+                double c2 = squaredDistance(p1, p2);
+
+                if (isObtuseTriangle(p1,p2,p3)){
+
+                    // Step 5: Try different Steiner point strategies
+                    for (int strategy = 0; strategy <= 5; ++strategy) {
+                        Point steinerPoint;
+
+                        // Generate Steiner points using different strategies
+                        if (strategy == 0) {
+                            steinerPoint = CGAL::circumcenter(p1, p2, p3);
+                        } else if (strategy == 1) {
+                            steinerPoint = calculate_incenter(p1, p2, p3);
+                        } else if (strategy == 2) {
+                            steinerPoint = getMidpointOfLongestEdge(p1, p2, p3);
+                        } else if (strategy == 3) {
+                            steinerPoint = CGAL::centroid(p1, p2, p3);
+                        } else if (strategy == 4) {
+                            steinerPoint = calculate_perpendicular_bisector_point(p1, p2, p3);
+                        } else if (strategy == 5) {
+                            steinerPoint = projectPointOntoTriangle(Point(0, 0), p1, p2, p3);
+                        }
+
+                        // Validate the Steiner point
+                        if (!CGAL::is_finite(steinerPoint.x()) || !CGAL::is_finite(steinerPoint.y())) {
+                            continue;
+                        }
+
+                        if (!isPointInsideBoundary(std::make_pair(steinerPoint.x(), steinerPoint.y()),region_boundary_, points_)) {
+                            continue;
+                        }
+
+                        // Step 6: Modify triangulation by adding the Steiner point
+                        CDT newCdt = cdt; // Create a copy of the CDT
+                        
+                        insertSteinerPoint(newCdt, {steinerPoint.x(), steinerPoint.y()});
+                        int newCountOfSteinerPoints=countOfSteinerPoints + 1 ;
+
+                        // Step 7: Calculate new energy
+                        double newEnergy = calculateEnergy(newCdt, alpha, beta,newCountOfSteinerPoints);
+                        double deltaEnergy = newEnergy - currentEnergy;
+
+                        // Step 8: Apply Metropolis criterion
+                        if (deltaEnergy < 0 || std::exp(-deltaEnergy / temperature) >= getRandomUniform()) {
+                            // Accept the new triangulation
+                            
+                            cdt = newCdt;
+                            countOfSteinerPoints=newCountOfSteinerPoints;
+                            currentEnergy = newEnergy;
+                            std::cout << "Accepted new configuration. Energy: " << currentEnergy << ", Steiner points: " << countOfSteinerPoints << "\n";
+                            break; // Exit the strategy loop for this triangle
+                        } else {
+                            std::cout << "Rejected configuration. Energy: " << currentEnergy << "\n";
+                        }
+                    }
+                }
+
+            }
+            // Step 9: Decrease the temperature
+            temperature -= 1.0 / L;
+        }
+        std::cout << "Final energy: " << currentEnergy << "\n";
+        std::cout << "Total Steiner points added: " << countOfSteinerPoints << std::endl;
+        std::cout<<"Final obtuse triangles count : " << countObtuseTriangles(cdt) << std::endl;
+        CGAL::draw(cdt);
+
+
+
+
+
+    }
+
+
+    // Helper function to insert a Steiner point and update the CDT
+    void CDTProcessor::insertSteinerPoint(CDT& cdt, const std::pair<double, double>& point) {
+        CGAL::Epick::Point_2 steinerPoint(point.first, point.second);
+        cdt.insert(steinerPoint);
+    }
+
+    // Random number generator for uniform distribution
+    double CDTProcessor::getRandomUniform() {
+        static std::random_device rd;
+        static std::mt19937 gen(rd());
+        static std::uniform_real_distribution<> dis(0.0, 1.0);
+        return dis(gen);
+    }
+
+    // Random index generator
+    int CDTProcessor::getRandomIndex(int size) {
+        static std::random_device rd;
+        static std::mt19937 gen(rd());
+        static std::uniform_int_distribution<> dis(0, size - 1);
+        return dis(gen);
+    }
+
+
+    double CDTProcessor::calculateEnergy(const CDT& cdt, double alpha, double beta,int numberOfSteinerPoints) {
+        int obtuseTriangles = countObtuseTriangles(cdt); 
+        int steinerPoints = numberOfSteinerPoints;     
+        return alpha * obtuseTriangles * obtuseTriangles + beta * numberOfSteinerPoints;//TODO maybe change the obtuseTriangles^2 (based on the algorithm its only ^1)
+    }
 
 
 

@@ -103,7 +103,15 @@ namespace Triangulation {
 
         void localSearch(CDT& cdt, double L);
 
+        void simulatedAnnealing(CDT& cdt,double alpha,double beta,int L);
+
+        void insertSteinerPoint(CDT& cdt, const std::pair<double, double>& point);
         
+        double getRandomUniform();
+
+        int getRandomIndex(int size);
+
+        double calculateEnergy(const CDT& cdt, double alpha, double beta,int numberOfSteinerPoints);
     };
 }
 
