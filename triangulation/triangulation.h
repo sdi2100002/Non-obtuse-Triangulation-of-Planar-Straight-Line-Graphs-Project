@@ -112,6 +112,10 @@ namespace Triangulation {
         int getRandomIndex(int size);
 
         double calculateEnergy(const CDT& cdt, double alpha, double beta,int numberOfSteinerPoints);
+    
+        void antColonyOptimization(CDT& cdt,double alpha,double beta,double xi,double psi,double lambda,int kappa,int L);
+
+        double calculateHeuristic(const Point& p1,const Point& p2,const Point&p3,const std::string& strategy);
     };
 }
 

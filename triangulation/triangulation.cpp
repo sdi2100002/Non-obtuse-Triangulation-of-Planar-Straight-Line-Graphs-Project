@@ -690,8 +690,20 @@ namespace Triangulation {
             for (const auto& [key, value] : parameters) {
                 std::cout << "  " << key << ": " << value << "\n";
             }
+            double alpha = (parameters.find("alpha") != parameters.end()) ? parameters.at("alpha") : 0.0;
+            double beta = (parameters.find("beta") != parameters.end()) ? parameters.at("beta") : 0.0;
+            double xi = (parameters.find("xi") != parameters.end()) ? parameters.at("xi") : 1.0;
+            double psi = (parameters.find("psi") != parameters.end()) ? parameters.at("psi") : 1.0;
+            double lambda = (parameters.find("lambda") != parameters.end()) ? parameters.at("lambda") : 0.1;
+            int kappa = (parameters.find("kappa") != parameters.end()) ? static_cast<int>(parameters.at("kappa")) : 5;
+            int L = (parameters.find("L") != parameters.end()) ? static_cast<int>(parameters.at("L")) : 10;
+
+            std::cout<<"alpha: " << alpha << std::endl;
+            
             // Placeholder for ant colony optimization logic
             std::cout << "Executing ant colony optimization...\n";
+
+            antColonyOptimization(cdt,alpha,beta,xi,psi,lambda,kappa,L);
         } 
         else {
             // Handle invalid method input
@@ -921,13 +933,9 @@ namespace Triangulation {
         }
         std::cout << "Final energy: " << currentEnergy << "\n";
         std::cout << "Total Steiner points added: " << countOfSteinerPoints << std::endl;
+        
         std::cout<<"Final obtuse triangles count : " << countObtuseTriangles(cdt) << std::endl;
         CGAL::draw(cdt);
-
-
-
-
-
     }
 
 
@@ -961,6 +969,117 @@ namespace Triangulation {
     }
 
 
+    void CDTProcessor::antColonyOptimization(CDT& cdt,double alpha,double beta,double xi,double psi,double lambda,int kappa,int L){
+        // Step 1: Initialize pheromone values
+        double tau_initial = 1.0; 
+        std::map<Point, double> pheromones; 
 
+        // Initialize pheromone trails for potential Steiner points
+        for (auto face = cdt.finite_faces_begin(); face != cdt.finite_faces_end(); ++face) {
+            auto p1 = face->vertex(0)->point();
+            auto p2 = face->vertex(1)->point();
+            auto p3 = face->vertex(2)->point();
+
+            // Possible Steiner points
+            std::vector<Point> options = {
+                CGAL::circumcenter(p1, p2, p3),
+                calculate_incenter(p1, p2, p3),
+                getMidpointOfLongestEdge(p1, p2, p3),
+                CGAL::centroid(p1, p2, p3),
+                calculate_perpendicular_bisector_point(p1, p2, p3)
+            };
+
+            for (const auto& sp : options) {
+                pheromones[sp] = tau_initial;
+            }
+        }
+
+        // Step 2: Begin ant colony optimization cycles
+        CDT bestCdt = cdt;
+        double bestEnergy = calculateEnergy(cdt, alpha, beta, 0); // Initial energy
+
+        for (int cycle = 0 ;cycle < L ; cycle++){
+            std::cout<<"Cycle: " << cycle + 1 << " of " << L << std::endl;
+
+            for (int ant = 0 ; ant < kappa ; ant++){
+                CDT antCdt=cdt;
+
+                for (auto face = antCdt.finite_faces_begin(); face != antCdt.finite_faces_end();++face){
+                    auto p1 = face->vertex(0)->point();
+                    auto p2 = face->vertex(1)->point();
+                    auto p3 = face->vertex(2)->point();
+
+                    if (isObtuseTriangle(p1,p2,p3)){
+                        std::vector<std::pair<Point, double>> options = {
+                        {CGAL::circumcenter(p1, p2, p3), calculateHeuristic(p1, p2, p3, "circumcenter")},
+                        {getMidpointOfLongestEdge(p1, p2, p3), calculateHeuristic(p1, p2, p3, "midpoint")},
+                        {calculate_perpendicular_bisector_point(p1, p2, p3), calculateHeuristic(p1, p2, p3, "perpendicular")}   
+                        };
+                    }
+
+
+                }
+            }
+        }
+
+    }
+
+
+    double CDTProcessor::calculateHeuristic(const Point& p1,const Point& p2,const Point&p3,const std::string& strategy){
+        // Calculate circumcenter and circumradius (R)
+        Point circumcenter = CGAL::circumcenter(p1, p2, p3);
+        double circumradius = std::sqrt(CGAL::squared_distance(circumcenter, p1));  // Circumradius (R)
+
+        // Find the longest edge and calculate the height from that edge
+        double a = std::sqrt(CGAL::squared_distance(p2, p3)); // Edge length between p2 and p3
+        double b = std::sqrt(CGAL::squared_distance(p1, p3)); // Edge length between p1 and p3
+        double c = std::sqrt(CGAL::squared_distance(p1, p2)); // Edge length between p1 and p2
+        double longestEdge = std::max({a, b, c});  // The longest side of the triangle
+
+        // Calculate the area of the triangle using the determinant formula (shoelace formula)
+        double area = std::abs(CGAL::area(p1, p2, p3));
+
+        // Calculate height from the longest edge
+        double height = (2 * area) / longestEdge;
+
+        // Compute the radius-to-height ratio (ρ)
+        double rho = circumradius / height;
+
+        // Depending on the strategy, we calculate different heuristics
+        if (strategy == "perpendicular") {
+            // Vertex projection heuristic, most useful when ρ > 2.0
+            if (rho > 2.0) {
+                return std::max(0.0, (rho - 1) / rho);
+            } else {
+                return 0.0;
+            }
+        } 
+        else if (strategy == "circumcenter") {
+            // Circumcenter heuristic, probable when ρ ∈ [1.0, 2.0]
+            if (rho >= 1.0 && rho <= 2.0) {
+                return rho / (2 + rho);  // Prioritize circumcenter for moderately obtuse triangles
+            } else {
+                return 0.0;
+            }
+        } 
+        else if (strategy == "midpoint") {
+            // Midpoint heuristic, favored when ρ < 1.0
+            if (rho < 1.0) {
+                return std::max(0.0, (3 - 2 * rho) / 3);  // Favor midpoint for low ρ values
+            } else {
+                return 0.0;
+            }
+        } 
+        else if (strategy == "mean_adjacent") {
+            // Mean of adjacent obtuse triangles, if there are at least 2 adjacent obtuse triangles
+            // For this case, you would need additional logic to check for adjacent obtuse triangles.
+            return 1.0;  // Priority is given to this option in this case
+        } 
+        else {
+            // Default case: no heuristic for unrecognized strategies
+            std::cout << "Unkown method " << std::endl;
+            return 0.0;
+        }
+    }
 
 }
