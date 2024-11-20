@@ -116,6 +116,10 @@ namespace Triangulation {
         void antColonyOptimization(CDT& cdt,double alpha,double beta,double xi,double psi,double lambda,int kappa,int L);
 
         double calculateHeuristic(const Point& p1,const Point& p2,const Point&p3,const std::string& strategy);
+
+        bool pointExistsInTriangulation(const CDT& cdt, const Point& point);
+
+        bool isImprovingSteinerPoint(const CDT& cdt, const Point& steinerPoint,double alpha,double beta,int counterSteiner);
     };
 }
 
