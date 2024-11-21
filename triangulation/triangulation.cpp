@@ -838,7 +838,6 @@ namespace Triangulation {
         return cdt;
     }
 
-
     void CDTProcessor::simulatedAnnealing(CDT& cdt,double alpha,double beta,int L){
         // Step 1: Compute initial energy of the triangulation
         int countOfSteinerPoints=0;
@@ -922,7 +921,7 @@ namespace Triangulation {
                             std::cout << "Accepted new configuration. Energy: " << currentEnergy << ", Steiner points: " << countOfSteinerPoints << "\n";
                             break; // Exit the strategy loop for this triangle
                         } else {
-                            std::cout << "Rejected configuration. Energy: " << currentEnergy << "\n";
+                            //std::cout << "Rejected configuration. Energy: " << currentEnergy << "\n";
                         }
                     }
                 }
@@ -937,7 +936,6 @@ namespace Triangulation {
         std::cout<<"Final obtuse triangles count : " << countObtuseTriangles(cdt) << std::endl;
         CGAL::draw(cdt);
     }
-
 
     // Helper function to insert a Steiner point and update the CDT
     void CDTProcessor::insertSteinerPoint(CDT& cdt, const std::pair<double, double>& point) {
@@ -961,13 +959,11 @@ namespace Triangulation {
         return dis(gen);
     }
 
-
     double CDTProcessor::calculateEnergy(const CDT& cdt, double alpha, double beta,int numberOfSteinerPoints) {
         int obtuseTriangles = countObtuseTriangles(cdt); 
         int steinerPoints = numberOfSteinerPoints;     
         return alpha * obtuseTriangles * obtuseTriangles + beta * numberOfSteinerPoints;//TODO maybe change the obtuseTriangles^2 (based on the algorithm its only ^1)
     }
-
 
     void CDTProcessor::antColonyOptimization(CDT& cdt,double alpha,double beta,double xi,double psi,double lambda,int kappa,int L){
         // Step 1: Initialize pheromone values
@@ -1037,8 +1033,6 @@ namespace Triangulation {
                             eta=weight;
                         }
                     }
-                    
-                    std::cout<<"check point 1"<< std::endl;
 
                     double randomValue= getRandomUniform() * totalWeight;
                     Point selectedPoint;
@@ -1049,7 +1043,6 @@ namespace Triangulation {
                             break;
                         }
                     }
-                    std::cout<<"check point 111"<< std::endl;
 
                     if(pointExistsInTriangulation(antCdt,selectedPoint)){
                         std::cout<<"Point already exists in the CDT,skipping:" << std::endl;
@@ -1069,25 +1062,19 @@ namespace Triangulation {
                         std::cout << "Point is outside boundary skipping: " << selectedPoint << std::endl;
                         continue;
                     }
-                    std::cout<<"check point 2"<< std::endl;
 
                 }
-                std::cout<<"here1"<<std::endl;
             }
             
             totalSteinerCounter += steinerCounter;
-            std::cout<<"here"<<std::endl;
             double energy = calculateEnergy(antCdt,alpha,beta,totalSteinerCounter);
             
-            std::cout<< "before push back" <<std::endl;
             antResults.push_back({antCdt,energy});
-            std::cout<<"after push back" << std::endl;
             
             if(energy < bestEnergy){
                 bestCdt=antCdt;
                 bestEnergy=energy;
             }
-            std::cout<<"check point 3"<< std::endl;
 
             for(auto& [sp,tau] : pheromones){
                 double deltaTau=0.0;
@@ -1103,7 +1090,7 @@ namespace Triangulation {
         cdt = bestCdt;
         std::cout << "Final Energy: " << bestEnergy << "\n";
         std::cout << "Final Obtuse Triangles: " << countObtuseTriangles(cdt) << "\n";
-        std::cout<<"Obtuse in bestCdt: " << countObtuseTriangles(bestCdt);
+        std::cout<<"Obtuse in bestCdt: " << countObtuseTriangles(bestCdt) << "\n";
         std::cout << "Total Steiner Points Inserted: " << totalSteinerCounter << "\n";
         CGAL::draw(cdt);
         CGAL::draw(bestCdt);
@@ -1138,7 +1125,6 @@ namespace Triangulation {
         return false; // Steiner point does not improve the triangulation
     }
 
-
     bool CDTProcessor::pointExistsInTriangulation(const CDT& cdt, const Point& point) {
         for (auto vertex_it = cdt.finite_vertices_begin(); vertex_it != cdt.finite_vertices_end(); ++vertex_it) {
             if (vertex_it->point() == point) {
@@ -1147,7 +1133,6 @@ namespace Triangulation {
         }
         return false; // Point is not a vertex
     }
-
 
     double CDTProcessor::calculateHeuristic(const Point& p1,const Point& p2,const Point&p3,const std::string& strategy){
         // Calculate circumcenter and circumradius (R)
