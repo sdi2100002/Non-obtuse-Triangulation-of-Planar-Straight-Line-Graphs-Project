@@ -1053,8 +1053,10 @@ namespace Triangulation {
             }
         }
 
+
+
         // Step 2: Begin ant colony optimization cycles
-        CDT bestCdt = cdt;
+        CDT bestCdt(cdt);
         double bestEnergy = calculateEnergy(cdt, alpha, beta, 0); // Initial energy
         // int steinerCounter;
         // CDT antCdt;
@@ -1065,17 +1067,24 @@ namespace Triangulation {
             
             int cycleSteinerCounter=0;
             double cycleBestEnergy=std::numeric_limits<double>::max();
-            CDT cycleBestCdt=cdt;
+            CDT cycleBestCdt(cdt);
 
 
             for (int ant = 0 ; ant < kappa ; ant++){
                 std::cout<<"ant:"<<ant<<std::endl;
-                CDT antCdt=cdt;
+                CDT antCdt(cdt);
                 int antSteinerCounter=0;
 
                 std::vector<CDT::Face_handle> faces;
                 for (auto face = antCdt.finite_faces_begin(); face != antCdt.finite_faces_end(); ++face) {
                     faces.push_back(face);
+                }
+
+                cycleBestCdt.clear();
+                for (auto face = antCdt.finite_faces_begin(); face != antCdt.finite_faces_end(); ++face) {
+                    cycleBestCdt.insert(face->vertex(0)->point());
+                    cycleBestCdt.insert(face->vertex(1)->point());
+                    cycleBestCdt.insert(face->vertex(2)->point());
                 }
 
                 for (const auto& face:faces){
@@ -1118,7 +1127,7 @@ namespace Triangulation {
 
                     if(!pointSelected){
                         std::cerr << "No point selected.Falling back to mean Adjacent Point. " << std::endl;
-                        selectedPoint=getMeanAdjacentPoint(face,cdt); //we can place cirmucenter here
+                        selectedPoint=CGAL::circumcenter(p1, p2, p3); //we can place cirmucenter here
                     }
 
                     if(pointExistsInTriangulation(antCdt,selectedPoint)){
@@ -1150,7 +1159,12 @@ namespace Triangulation {
                 double antEnergy = calculateEnergy(antCdt,alpha,beta,antSteinerCounter);
 
                 if (antEnergy < cycleBestEnergy){
-                    cycleBestCdt=antCdt;
+                    cycleBestCdt.clear();
+                    for (auto face = antCdt.finite_faces_begin(); face != antCdt.finite_faces_end(); ++face) {
+                        cycleBestCdt.insert(face->vertex(0)->point());
+                        cycleBestCdt.insert(face->vertex(1)->point());
+                        cycleBestCdt.insert(face->vertex(2)->point());
+                    }
                     cycleBestEnergy=antEnergy;
                     cycleSteinerCounter=antSteinerCounter;
                     std::cout << "Updated cycle best energy." << std::endl;
