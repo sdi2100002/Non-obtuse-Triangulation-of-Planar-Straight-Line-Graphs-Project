@@ -965,6 +965,46 @@ namespace Triangulation {
         return alpha * obtuseTriangles * obtuseTriangles + beta * numberOfSteinerPoints;//TODO maybe change the obtuseTriangles^2 (based on the algorithm its only ^1)
     }
 
+    Point CDTProcessor::getMeanAdjacentPoint(CDT::Face_handle face, CDT& cdt) {
+        auto p1 = face->vertex(0)->point();
+        auto p2 = face->vertex(1)->point();
+        auto p3 = face->vertex(2)->point();
+
+        Point circumcenter = CGAL::circumcenter(p1, p2, p3); // Current face circumcenter
+        std::vector<Point> adjacentCircumcenters;
+
+        // Check all neighbors for obtuse triangles
+        for (int i = 0; i < 3; ++i) { // Each edge of the triangle
+            auto neighbor = face->neighbor(i);
+            if (cdt.is_infinite(neighbor)) continue; // Skip infinite faces
+
+            auto q1 = neighbor->vertex(0)->point();
+            auto q2 = neighbor->vertex(1)->point();
+            auto q3 = neighbor->vertex(2)->point();
+
+            if (isObtuseTriangle(q1, q2, q3)) {
+                adjacentCircumcenters.push_back(CGAL::circumcenter(q1, q2, q3));
+            }
+        }
+
+        // If fewer than two adjacent obtuse triangles, return an invalid point
+        if (adjacentCircumcenters.size() < 2) {
+            return Point(0, 0); // Return a "null" point to indicate no mean point is applicable
+        }
+
+        // Compute the mean of circumcenters
+        Point meanPoint = circumcenter;
+        for (const auto& adjCircumcenter : adjacentCircumcenters) {
+            meanPoint = Point(
+                (meanPoint.x() + adjCircumcenter.x()) / 2,
+                (meanPoint.y() + adjCircumcenter.y()) / 2
+            );
+        }
+
+        return meanPoint;
+    }
+
+
     void CDTProcessor::antColonyOptimization(CDT& cdt,double alpha,double beta,double xi,double psi,double lambda,int kappa,int L){
         // Step 1: Initialize pheromone values
         double tau_initial = 1.0; 
@@ -981,7 +1021,8 @@ namespace Triangulation {
             std::vector<Point> options = {
                 CGAL::circumcenter(p1, p2, p3),
                 getMidpointOfLongestEdge(p1, p2, p3),
-                calculate_perpendicular_bisector_point(p1, p2, p3)
+                calculate_perpendicular_bisector_point(p1, p2, p3),
+                getMeanAdjacentPoint(face,cdt),
             };
 
             for (const auto& sp : options) {
@@ -992,17 +1033,22 @@ namespace Triangulation {
         // Step 2: Begin ant colony optimization cycles
         CDT bestCdt = cdt;
         double bestEnergy = calculateEnergy(cdt, alpha, beta, 0); // Initial energy
-        int steinerCounter;
-        CDT antCdt;
-        std::vector<std::pair<CDT,double>> antResults;
+        // int steinerCounter;
+        // CDT antCdt;
+        // std::vector<std::pair<CDT,double>> antResults;
 
         for (int cycle = 0 ;cycle < L ; cycle++){
             std::cout<<"Cycle: " << cycle + 1 << " of " << L << std::endl;
             
+            int cycleSteinerCounter=0;
+            double cycleBestEnergy=bestEnergy;
+            CDT cycleBestCdt=bestCdt;
+
+
             for (int ant = 0 ; ant < kappa ; ant++){
                 std::cout<<"ant:"<<ant<<std::endl;
-                antCdt=cdt;
-                steinerCounter=0;
+                CDT antCdt=cdt;
+                int antSteinerCounter=0;
 
                 std::vector<CDT::Face_handle> faces;
                 for (auto face = antCdt.finite_faces_begin(); face != antCdt.finite_faces_end(); ++face) {
@@ -1020,7 +1066,8 @@ namespace Triangulation {
                         options = {
                         {CGAL::circumcenter(p1, p2, p3), calculateHeuristic(p1, p2, p3, "circumcenter")},
                         {getMidpointOfLongestEdge(p1, p2, p3), calculateHeuristic(p1, p2, p3, "midpoint")},
-                        {calculate_perpendicular_bisector_point(p1, p2, p3), calculateHeuristic(p1, p2, p3, "perpendicular")}   
+                        {calculate_perpendicular_bisector_point(p1, p2, p3), calculateHeuristic(p1, p2, p3, "perpendicular")},
+                        {getMeanAdjacentPoint(face,cdt),calculateHeuristic(p1,p2,p3,"mean_adjacent")}   
                         };
                     }
                     
@@ -1036,64 +1083,78 @@ namespace Triangulation {
 
                     double randomValue= getRandomUniform() * totalWeight;
                     Point selectedPoint;
+                    bool pointSelected = false;
 
                     for (const auto& [sp,weight] : options){
                         if((randomValue -= weight) <= 0){
                             selectedPoint=sp;
+                            pointSelected = true;
                             break;
                         }
                     }
 
+                    if(!pointSelected){
+                        std::cerr << "No point selected.Falling back to mean Adjacent Point. " << std::endl;
+                        selectedPoint=getMeanAdjacentPoint(face,cdt); //we can place cirmucenter here
+                    }
+
                     if(pointExistsInTriangulation(antCdt,selectedPoint)){
-                        std::cout<<"Point already exists in the CDT,skipping:" << std::endl;
-                        continue;
+                        //std::cout<<"Point already exists in the CDT,skipping:" << std::endl;
+                        
+                        for (const auto& [sp,weight] : options){
+                            if(!pointExistsInTriangulation(antCdt,sp)) {
+                                selectedPoint=sp;
+                                break;
+                            }
+                        }
+
+                        if (pointExistsInTriangulation(antCdt,selectedPoint)) continue;
+
                     }
 
                     if(isPointInsideBoundary(std::make_pair(selectedPoint.x(),selectedPoint.y()),region_boundary_,points_)){
                         try{
+                            std::cout<<"inserting"<<std::endl;
                             insertSteinerPoint(antCdt,{selectedPoint.x(),selectedPoint.y()});
-                            steinerCounter++;
+                            antSteinerCounter++;
                         } catch(const std::exception& e){
                             std::cerr << "Error inserting point : " << e.what() <<std::endl;
                             continue;
                         }
                     }
-                    else {
-                        std::cout << "Point is outside boundary skipping: " << selectedPoint << std::endl;
-                        continue;
-                    }
-
                 }
+
+                double antEnergy = calculateEnergy(antCdt,alpha,beta,antSteinerCounter);
+
+                if (antEnergy < cycleBestEnergy){
+                    std::cout<<"hereeee" << std::endl;
+                    cycleBestCdt=antCdt;
+                    cycleBestEnergy=antEnergy;
+                    cycleSteinerCounter=antSteinerCounter;
+                }
+
             }
             
-            totalSteinerCounter += steinerCounter;
-            double energy = calculateEnergy(antCdt,alpha,beta,totalSteinerCounter);
-            
-            antResults.push_back({antCdt,energy});
-            
-            if(energy < bestEnergy){
-                bestCdt=antCdt;
-                bestEnergy=energy;
+            if (cycleBestEnergy < bestEnergy) {
+                std::cout<<"hereeee22" << std::endl;
+                bestCdt = cycleBestCdt;
+                bestEnergy = cycleBestEnergy;
+                totalSteinerCounter += cycleSteinerCounter;
             }
 
-            for(auto& [sp,tau] : pheromones){
-                double deltaTau=0.0;
-                
-                if(isImprovingSteinerPoint(bestCdt,sp,alpha,beta,totalSteinerCounter)){
-                    deltaTau = 1.0 / (1.0 + alpha * countObtuseTriangles(bestCdt) + beta * totalSteinerCounter);
+            for (auto& [sp, tau] : pheromones) {
+                double deltaTau = 0.0;
+                if (isImprovingSteinerPoint(bestCdt, sp, alpha, beta, totalSteinerCounter)) {
+                    deltaTau = 1.0 / (1.0 + alpha*countObtuseTriangles(bestCdt) + beta * totalSteinerCounter);
                 }
                 tau = (1 - lambda) * tau + deltaTau;
             }
-
         }
-
         cdt = bestCdt;
         std::cout << "Final Energy: " << bestEnergy << "\n";
         std::cout << "Final Obtuse Triangles: " << countObtuseTriangles(cdt) << "\n";
-        std::cout<<"Obtuse in bestCdt: " << countObtuseTriangles(bestCdt) << "\n";
         std::cout << "Total Steiner Points Inserted: " << totalSteinerCounter << "\n";
         CGAL::draw(cdt);
-        CGAL::draw(bestCdt);
 
     }
 

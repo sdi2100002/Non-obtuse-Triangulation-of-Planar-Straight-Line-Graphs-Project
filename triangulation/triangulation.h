@@ -101,6 +101,12 @@ namespace Triangulation {
         //This function ensures that a given set of points forms a convex polygon by computing the convex hull
         std::vector<Point> ensureConvexPolygon(const std::vector<Point>& points);
 
+        Point getMeanAdjacentPoint(CDT::Face_handle face, CDT& cdt);
+
+        double calculateAngle(const Point& p1, const Point& p2, const Point& p3);
+
+        double calculateAnglePenalty(const CDT& cdt);
+
         void localSearch(CDT& cdt, double L);
 
         void simulatedAnnealing(CDT& cdt,double alpha,double beta,int L);
