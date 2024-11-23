@@ -759,7 +759,7 @@ namespace Triangulation {
                 int best_obtuse_count = current_obtuse_count;
 
                 // Evaluate Steiner point strategies
-                for (int strategy = 0; strategy <= 5; ++strategy) {
+                for (int strategy = 0; strategy <= 6; ++strategy) {
                     Point steiner_point;
 
                     // Generate Steiner points using different strategies
@@ -775,6 +775,12 @@ namespace Triangulation {
                         steiner_point = calculate_perpendicular_bisector_point(p1, p2, p3); 
                     } else if (strategy == 5) {
                         steiner_point = projectPointOntoTriangle(Point(0, 0), p1, p2, p3);
+                    } else if(strategy == 6){
+                        // TODO if delaunay == true dont call strategy 6
+                        steiner_point=getMeanAdjacentPoint(fit,best_cdt); //TODO SEGMETATION AFTER 1K LOOPS
+                        if (steiner_point.x()==0 && steiner_point.y()==0){
+                            continue;
+                        }
                     }
 
                     // Validate the Steiner point
@@ -833,8 +839,6 @@ namespace Triangulation {
         for (const auto& constraint : constraints_) {
             cdt.insert_constraint(cgal_points[constraint.first], cgal_points[constraint.second]);
         }
-
-        CGAL::draw(cdt);
         return cdt;
     }
 
@@ -971,19 +975,27 @@ namespace Triangulation {
         auto p3 = face->vertex(2)->point();
 
         Point circumcenter = CGAL::circumcenter(p1, p2, p3); // Current face circumcenter
+
+        if (!CGAL::is_finite(circumcenter.x()) || !CGAL::is_finite(circumcenter.y())) {
+            return Point(0, 0); // Return an invalid point if circumcenter is invalid
+        }
+        
         std::vector<Point> adjacentCircumcenters;
 
         // Check all neighbors for obtuse triangles
         for (int i = 0; i < 3; ++i) { // Each edge of the triangle
             auto neighbor = face->neighbor(i);
-            if (cdt.is_infinite(neighbor)) continue; // Skip infinite faces
+            if (cdt.is_infinite(neighbor) || neighbor == face) continue; // Skip infinite faces
 
             auto q1 = neighbor->vertex(0)->point();
             auto q2 = neighbor->vertex(1)->point();
             auto q3 = neighbor->vertex(2)->point();
 
             if (isObtuseTriangle(q1, q2, q3)) {
-                adjacentCircumcenters.push_back(CGAL::circumcenter(q1, q2, q3));
+                Point neighborCircumcenter=CGAL::circumcenter(q1,q2,q3);
+                if(CGAL::is_finite(neighborCircumcenter.x()) && CGAL::is_finite(neighborCircumcenter.y())){
+                    adjacentCircumcenters.push_back(neighborCircumcenter);
+                }
             }
         }
 
@@ -1001,11 +1013,22 @@ namespace Triangulation {
             );
         }
 
+        if (!isPointInsideBoundary(std::make_pair(meanPoint.x(), meanPoint.y()), region_boundary_, points_) ||
+        !CGAL::is_finite(meanPoint.x()) || !CGAL::is_finite(meanPoint.y())) {
+            return Point(0, 0); 
+        }
+
+        if (!CGAL::is_finite(meanPoint.x()) || !CGAL::is_finite(meanPoint.y()) || 
+            !isPointInsideBoundary(std::make_pair(meanPoint.x(), meanPoint.y()), region_boundary_, points_)) {
+            return Point(0, 0); 
+        }
+
         return meanPoint;
     }
 
 
     void CDTProcessor::antColonyOptimization(CDT& cdt,double alpha,double beta,double xi,double psi,double lambda,int kappa,int L){
+        //TODO inserting messages but 0 steiner count
         // Step 1: Initialize pheromone values
         double tau_initial = 1.0; 
         std::map<Point, double> pheromones; 
@@ -1041,8 +1064,8 @@ namespace Triangulation {
             std::cout<<"Cycle: " << cycle + 1 << " of " << L << std::endl;
             
             int cycleSteinerCounter=0;
-            double cycleBestEnergy=bestEnergy;
-            CDT cycleBestCdt=bestCdt;
+            double cycleBestEnergy=std::numeric_limits<double>::max();
+            CDT cycleBestCdt=cdt;
 
 
             for (int ant = 0 ; ant < kappa ; ant++){
@@ -1075,7 +1098,7 @@ namespace Triangulation {
                     if(!options.empty()){
                         for(auto& [sp,eta]: options){
                             double tau= pheromones[sp];
-                            double weight=std::pow(tau,1)*std::pow(eta,psi);
+                            double weight=std::pow(tau,xi)*std::pow(eta,psi);
                             totalWeight +=weight;
                             eta=weight;
                         }
@@ -1127,19 +1150,19 @@ namespace Triangulation {
                 double antEnergy = calculateEnergy(antCdt,alpha,beta,antSteinerCounter);
 
                 if (antEnergy < cycleBestEnergy){
-                    std::cout<<"hereeee" << std::endl;
                     cycleBestCdt=antCdt;
                     cycleBestEnergy=antEnergy;
                     cycleSteinerCounter=antSteinerCounter;
+                    std::cout << "Updated cycle best energy." << std::endl;
                 }
 
             }
             
             if (cycleBestEnergy < bestEnergy) {
-                std::cout<<"hereeee22" << std::endl;
                 bestCdt = cycleBestCdt;
                 bestEnergy = cycleBestEnergy;
                 totalSteinerCounter += cycleSteinerCounter;
+                std::cout << "Updated global best energy." << std::endl;
             }
 
             for (auto& [sp, tau] : pheromones) {
