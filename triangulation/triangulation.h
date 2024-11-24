@@ -126,6 +126,8 @@ namespace Triangulation {
         bool pointExistsInTriangulation(const CDT& cdt, const Point& point);
 
         bool isImprovingSteinerPoint(const CDT& cdt, const Point& steinerPoint,double alpha,double beta,int counterSteiner);
+    
+        Point selectSteinerPoint(const std::vector<std::pair<Point, double>>& options, double totalWeight);
     };
 }
 

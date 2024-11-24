@@ -943,6 +943,7 @@ namespace Triangulation {
 
     // Helper function to insert a Steiner point and update the CDT
     void CDTProcessor::insertSteinerPoint(CDT& cdt, const std::pair<double, double>& point) {
+        std::cout<<"inserting inside function..." << std::endl; 
         CGAL::Epick::Point_2 steinerPoint(point.first, point.second);
         cdt.insert(steinerPoint);
     }
@@ -966,7 +967,7 @@ namespace Triangulation {
     double CDTProcessor::calculateEnergy(const CDT& cdt, double alpha, double beta,int numberOfSteinerPoints) {
         int obtuseTriangles = countObtuseTriangles(cdt); 
         int steinerPoints = numberOfSteinerPoints;     
-        return alpha * obtuseTriangles * obtuseTriangles + beta * numberOfSteinerPoints;//TODO maybe change the obtuseTriangles^2 (based on the algorithm its only ^1)
+        return alpha * obtuseTriangles * obtuseTriangles  + beta * numberOfSteinerPoints;//TODO maybe change the obtuseTriangles^2 (based on the algorithm its only ^1)
     }
 
     Point CDTProcessor::getMeanAdjacentPoint(CDT::Face_handle face, CDT& cdt) {
@@ -1056,23 +1057,28 @@ namespace Triangulation {
 
 
         // Step 2: Begin ant colony optimization cycles
-        CDT bestCdt(cdt);
+        CDT bestCdt=cdt;
         double bestEnergy = calculateEnergy(cdt, alpha, beta, 0); // Initial energy
         // int steinerCounter;
         // CDT antCdt;
         // std::vector<std::pair<CDT,double>> antResults;
-
+        CDT cycleBestCdt;
         for (int cycle = 0 ;cycle < L ; cycle++){
             std::cout<<"Cycle: " << cycle + 1 << " of " << L << std::endl;
             
             int cycleSteinerCounter=0;
-            double cycleBestEnergy=std::numeric_limits<double>::max();
-            CDT cycleBestCdt(cdt);
+            double cycleBestEnergy=bestEnergy;
+            
+            
+            CDT cycleBestCdt = (cycle == 0) ? cdt : bestCdt;
+            
+
+            std::map<Point,double> deltaTau;
 
 
             for (int ant = 0 ; ant < kappa ; ant++){
                 std::cout<<"ant:"<<ant<<std::endl;
-                CDT antCdt(cdt);
+                CDT antCdt=cycleBestCdt;
                 int antSteinerCounter=0;
 
                 std::vector<CDT::Face_handle> faces;
@@ -1080,12 +1086,6 @@ namespace Triangulation {
                     faces.push_back(face);
                 }
 
-                cycleBestCdt.clear();
-                for (auto face = antCdt.finite_faces_begin(); face != antCdt.finite_faces_end(); ++face) {
-                    cycleBestCdt.insert(face->vertex(0)->point());
-                    cycleBestCdt.insert(face->vertex(1)->point());
-                    cycleBestCdt.insert(face->vertex(2)->point());
-                }
 
                 for (const auto& face:faces){
                     auto p1 = face->vertex(0)->point();
@@ -1095,6 +1095,7 @@ namespace Triangulation {
                     std::vector<std::pair<Point,double>> options;
 
                     if (isObtuseTriangle(p1,p2,p3)){
+                        //std::cout<<"Triangle is obtuse" << std::endl;
                         options = {
                         {CGAL::circumcenter(p1, p2, p3), calculateHeuristic(p1, p2, p3, "circumcenter")},
                         {getMidpointOfLongestEdge(p1, p2, p3), calculateHeuristic(p1, p2, p3, "midpoint")},
@@ -1113,45 +1114,20 @@ namespace Triangulation {
                         }
                     }
 
-                    double randomValue= getRandomUniform() * totalWeight;
-                    Point selectedPoint;
-                    bool pointSelected = false;
+                    Point selectedPoint = selectSteinerPoint(options, totalWeight);
 
-                    for (const auto& [sp,weight] : options){
-                        if((randomValue -= weight) <= 0){
-                            selectedPoint=sp;
-                            pointSelected = true;
-                            break;
-                        }
-                    }
-
-                    if(!pointSelected){
-                        std::cerr << "No point selected.Falling back to mean Adjacent Point. " << std::endl;
-                        selectedPoint=CGAL::circumcenter(p1, p2, p3); //we can place cirmucenter here
-                    }
-
-                    if(pointExistsInTriangulation(antCdt,selectedPoint)){
-                        //std::cout<<"Point already exists in the CDT,skipping:" << std::endl;
-                        
-                        for (const auto& [sp,weight] : options){
-                            if(!pointExistsInTriangulation(antCdt,sp)) {
-                                selectedPoint=sp;
-                                break;
-                            }
-                        }
-
-                        if (pointExistsInTriangulation(antCdt,selectedPoint)) continue;
-
-                    }
-
-                    if(isPointInsideBoundary(std::make_pair(selectedPoint.x(),selectedPoint.y()),region_boundary_,points_)){
+                    if(!pointExistsInTriangulation(antCdt,selectedPoint) && isPointInsideBoundary({selectedPoint.x(),selectedPoint.y()},region_boundary_,points_)){
                         try{
-                            std::cout<<"inserting"<<std::endl;
-                            insertSteinerPoint(antCdt,{selectedPoint.x(),selectedPoint.y()});
-                            antSteinerCounter++;
-                        } catch(const std::exception& e){
-                            std::cerr << "Error inserting point : " << e.what() <<std::endl;
-                            continue;
+                            double energyBefore = calculateEnergy(antCdt,alpha,beta,antSteinerCounter);
+                            insertSteinerPoint(antCdt, {selectedPoint.x(), selectedPoint.y()});
+                            double energyAfter = calculateEnergy(antCdt, alpha, beta, antSteinerCounter + 1);
+
+                            if (energyAfter < energyBefore) {
+                                antSteinerCounter++;
+                                std::cout << "Inserted Steiner point: (" << selectedPoint.x() << ", " << selectedPoint.y() << ")" << std::endl;
+                            }
+                        } catch (const std::exception& e){
+                            std::cerr <<"Error inserting point : " << e.what() << std::endl;
                         }
                     }
                 }
@@ -1159,15 +1135,16 @@ namespace Triangulation {
                 double antEnergy = calculateEnergy(antCdt,alpha,beta,antSteinerCounter);
 
                 if (antEnergy < cycleBestEnergy){
-                    cycleBestCdt.clear();
-                    for (auto face = antCdt.finite_faces_begin(); face != antCdt.finite_faces_end(); ++face) {
-                        cycleBestCdt.insert(face->vertex(0)->point());
-                        cycleBestCdt.insert(face->vertex(1)->point());
-                        cycleBestCdt.insert(face->vertex(2)->point());
-                    }
+                    cycleBestCdt = antCdt;
                     cycleBestEnergy=antEnergy;
                     cycleSteinerCounter=antSteinerCounter;
                     std::cout << "Updated cycle best energy." << std::endl;
+                }
+
+                for(const auto& [sp, _]:pheromones){
+                    if(isImprovingSteinerPoint(antCdt,sp,alpha,beta,antSteinerCounter)){
+                        deltaTau[sp] += 1.0 / (1.0+alpha*countObtuseTriangles(antCdt) + beta * antSteinerCounter);
+                    }
                 }
 
             }
@@ -1180,11 +1157,7 @@ namespace Triangulation {
             }
 
             for (auto& [sp, tau] : pheromones) {
-                double deltaTau = 0.0;
-                if (isImprovingSteinerPoint(bestCdt, sp, alpha, beta, totalSteinerCounter)) {
-                    deltaTau = 1.0 / (1.0 + alpha*countObtuseTriangles(bestCdt) + beta * totalSteinerCounter);
-                }
-                tau = (1 - lambda) * tau + deltaTau;
+                tau = (1 - lambda) * tau + deltaTau[sp];
             }
         }
         cdt = bestCdt;
@@ -1194,6 +1167,26 @@ namespace Triangulation {
         CGAL::draw(cdt);
 
     }
+
+    Point CDTProcessor::selectSteinerPoint(const std::vector<std::pair<Point, double>>& options, double totalWeight) {
+        // If options are empty, handle the fallback logic
+        if (options.empty()) {
+            //std::cerr << "No Steiner point options available. Returning a default point." << std::endl;
+            return Point(0, 0); // Replace with an appropriate fallback point or behavior
+        }
+
+        double randomValue = getRandomUniform() * totalWeight;
+        for (const auto& [sp, weight] : options) {
+            if ((randomValue -= weight) <= 0) {
+                return sp;
+            }
+        }
+
+        // If no point is selected due to precision issues, fallback to the first option
+        std::cout << "SELECT Steiner point: (" << options.front().first.x() << ", " << options.front().first.y() << ")" << std::endl;
+        return options.front().first; 
+    }
+
 
     bool CDTProcessor::isImprovingSteinerPoint(const CDT& cdt, const Point& steinerPoint,double alpha,double beta,int counterSteiner) {
         // Create a copy of the CDT to simulate the effect of adding the Steiner point
