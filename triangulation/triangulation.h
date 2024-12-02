@@ -17,6 +17,13 @@ typedef CGAL::Triangulation_data_structure_2<Vb, Fb> Tds;
 typedef CGAL::Constrained_Delaunay_triangulation_2<K, Tds> CDT;
 typedef CDT::Point Point;
 
+typedef struct AntSolution {
+    CDT::Face_handle face;      // Το τρίγωνο στο οποίο έγινε η βελτίωση
+    Point steiner_point;        // Το επιλεγμένο Steiner σημείο
+    double improvement_metric;  // Μετρική βελτίωσης (π.χ., μείωση σε αριθμό οξέων τριγώνων)
+}AntSolution;
+        
+
 namespace Triangulation {
 
     // We are using this class to handle the CDT processing
@@ -40,6 +47,7 @@ namespace Triangulation {
         std::string instance_uid_; 
         std::string method_;
         std::map<std::string,double> parameters_;
+        std::map<CDT::Face_handle, std::map<Point, double>> pheromone;
 
         // This function checks if the point pt is on the line segment formed by points p1 and p2
         bool isPointOnSegment(const std::pair<double, double>& pt, const std::pair<double, double>& p1, const std::pair<double, double>& p2);
@@ -128,6 +136,14 @@ namespace Triangulation {
         bool isImprovingSteinerPoint(const CDT& cdt, const Point& steinerPoint,double alpha,double beta,int counterSteiner);
     
         Point selectSteinerPoint(const std::vector<std::pair<Point, double>>& options, double totalWeight);
+
+
+        std::vector<Point> generateSteinerOptions(const CDT::Face_handle& face);
+        std::vector<AntSolution> resolve_conflicts(const std::vector<AntSolution>& solutions);
+        void applyAntSolution(const AntSolution& solution, CDT& cdt);
+
+        void UpdatePheromones(const std::vector<AntSolution>& solutions, double lambda, double alpha, double beta);
+        void copyTriangulation(const CDT& source, CDT& destination);
     };
 }
 
