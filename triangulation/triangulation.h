@@ -110,10 +110,6 @@ namespace Triangulation {
 
         Point getMeanAdjacentPoint(CDT::Face_handle face, CDT& cdt);
 
-        double calculateAngle(const Point& p1, const Point& p2, const Point& p3);
-
-        double calculateAnglePenalty(const CDT& cdt);
-
         void localSearch(CDT& cdt, double L);
 
         void simulatedAnnealing(CDT& cdt,double alpha,double beta,int L);
@@ -122,28 +118,23 @@ namespace Triangulation {
         
         double getRandomUniform();
 
-        int getRandomIndex(int size);
-
         double calculateEnergy(const CDT& cdt, double alpha, double beta,int numberOfSteinerPoints);
     
         void antColonyOptimization(CDT& cdt, double alpha, double beta, double xi, double psi,int lambda, int num_cycles, int num_ants);
 
         double calculateHeuristic(const Point& p1,const Point& p2,const Point&p3,const std::string& strategy);
-
-        bool pointExistsInTriangulation(const CDT& cdt, const Point& point);
-
-        bool isImprovingSteinerPoint(const CDT& cdt, const Point& steinerPoint,double alpha,double beta,int counterSteiner);
     
         Point selectSteinerPoint(const std::vector<std::pair<Point, double>>& options, double totalWeight);
 
-
         std::vector<Point> generateSteinerOptions(const CDT::Face_handle& face);
+        
         std::vector<AntSolution> resolve_conflicts(const std::vector<AntSolution>& solutions);
+        
         void applyAntSolution(const AntSolution& solution, CDT& cdt);
 
         void UpdatePheromones(std::map<CDT::Face_handle, std::map<Point, double>>& pheromone,const std::vector<AntSolution>& solutions, double lambda, double alpha, double beta);
+        
         void copyTriangulation(const CDT& source, CDT& destination);
-
 
         std::string selectStrategy(const std::vector<std::pair<std::string, double>>& method_probabilities, double total_probability);
     };

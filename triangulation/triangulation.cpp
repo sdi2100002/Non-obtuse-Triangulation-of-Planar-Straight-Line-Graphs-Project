@@ -956,14 +956,6 @@ namespace Triangulation {
         return dis(gen);
     }
 
-    // Random index generator
-    int CDTProcessor::getRandomIndex(int size) {
-        static std::random_device rd;
-        static std::mt19937 gen(rd());
-        static std::uniform_int_distribution<> dis(0, size - 1);
-        return dis(gen);
-    }
-
     double CDTProcessor::calculateEnergy(const CDT& cdt, double alpha, double beta,int numberOfSteinerPoints) {
         int obtuseTriangles = countObtuseTriangles(cdt); 
         int steinerPoints = numberOfSteinerPoints;     
@@ -1102,7 +1094,6 @@ namespace Triangulation {
         return ""; // Δεν πρέπει να φτάσουμε εδώ
     }
 
-
     void CDTProcessor::antColonyOptimization(CDT& cdt, double alpha, double beta, double xi, double psi, int lambda, int num_cycles, int num_ants) {
         std::map<CDT::Face_handle, std::map<Point, double>> pheromone;
 
@@ -1233,9 +1224,6 @@ namespace Triangulation {
         CGAL::draw(cdt);
     }
 
-
-
-
     void CDTProcessor::copyTriangulation(const CDT& source, CDT& destination) {
         destination.clear(); // Clear the current triangulation
 
@@ -1278,44 +1266,6 @@ namespace Triangulation {
         // If no point is selected due to precision issues, fallback to the first option
         std::cout << "SELECT Steiner point: (" << options.front().first.x() << ", " << options.front().first.y() << ")" << std::endl;
         return options.front().first; 
-    }
-
-
-    bool CDTProcessor::isImprovingSteinerPoint(const CDT& cdt, const Point& steinerPoint,double alpha,double beta,int counterSteiner) {
-        // Create a copy of the CDT to simulate the effect of adding the Steiner point
-        CDT tempCdt = cdt;
-
-        // Insert the Steiner point into the temporary CDT
-        auto newVertex = tempCdt.insert(steinerPoint);
-
-
-        // Calculate the energy before and after the insertion
-        double energyBefore = calculateEnergy(cdt, alpha, beta, counterSteiner);
-        double energyAfter = calculateEnergy(tempCdt, alpha, beta, counterSteiner+1);
-
-        // Compare the energy levels
-        if (energyAfter < energyBefore) {
-            return true; // Adding the Steiner point improves the triangulation
-        }
-
-        // Alternatively, check if the number of obtuse triangles has been reduced
-        int obtuseBefore = countObtuseTriangles(cdt);
-        int obtuseAfter = countObtuseTriangles(tempCdt);
-
-        if (obtuseAfter < obtuseBefore) {
-            return true; // Steiner point reduces obtuse triangles
-        }
-
-        return false; // Steiner point does not improve the triangulation
-    }
-
-    bool CDTProcessor::pointExistsInTriangulation(const CDT& cdt, const Point& point) {
-        for (auto vertex_it = cdt.finite_vertices_begin(); vertex_it != cdt.finite_vertices_end(); ++vertex_it) {
-            if (vertex_it->point() == point) {
-                return true; // Point is already a vertex
-            }
-        }
-        return false; // Point is not a vertex
     }
 
     double CDTProcessor::calculateHeuristic(const Point& p1,const Point& p2,const Point&p3,const std::string& strategy){
