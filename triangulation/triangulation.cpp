@@ -1088,7 +1088,7 @@ namespace Triangulation {
 
     void CDTProcessor::antColonyOptimization(CDT& cdt, double alpha, double beta, double xi, double psi,int lambda, int num_cycles, int num_ants) {
         std::map<CDT::Face_handle, std::map<Point, double>> pheromone;
-        // Αρχικοποίηση φερομονών
+        // Αρχικοποίηση φερομονών 
         for (auto face = cdt.finite_faces_begin(); face != cdt.finite_faces_end(); ++face) {
             auto steiner_options = generateSteinerOptions(face);
             for (const auto& point_option : steiner_options) {
