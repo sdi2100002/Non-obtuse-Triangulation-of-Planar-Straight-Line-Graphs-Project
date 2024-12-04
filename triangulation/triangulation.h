@@ -17,12 +17,11 @@ typedef CGAL::Triangulation_data_structure_2<Vb, Fb> Tds;
 typedef CGAL::Constrained_Delaunay_triangulation_2<K, Tds> CDT;
 typedef CDT::Point Point;
 
-typedef struct AntSolution {
+struct AntSolution {
     CDT::Face_handle face;      // Το τρίγωνο στο οποίο έγινε η βελτίωση
     Point steiner_point;        // Το επιλεγμένο Steiner σημείο
     double improvement_metric;  // Μετρική βελτίωσης (π.χ., μείωση σε αριθμό οξέων τριγώνων)
-}AntSolution;
-        
+};
 
 namespace Triangulation {
 
@@ -47,7 +46,7 @@ namespace Triangulation {
         std::string instance_uid_; 
         std::string method_;
         std::map<std::string,double> parameters_;
-        std::map<CDT::Face_handle, std::map<Point, double>> pheromone;
+        //std::map<CDT::Face_handle, std::map<Point, double>> pheromone;
 
         // This function checks if the point pt is on the line segment formed by points p1 and p2
         bool isPointOnSegment(const std::pair<double, double>& pt, const std::pair<double, double>& p1, const std::pair<double, double>& p2);
@@ -127,7 +126,7 @@ namespace Triangulation {
 
         double calculateEnergy(const CDT& cdt, double alpha, double beta,int numberOfSteinerPoints);
     
-        void antColonyOptimization(CDT& cdt,double alpha,double beta,double xi,double psi,double lambda,int kappa,int L);
+        void antColonyOptimization(CDT& cdt, double alpha, double beta, double xi, double psi,int lambda, int num_cycles, int num_ants);
 
         double calculateHeuristic(const Point& p1,const Point& p2,const Point&p3,const std::string& strategy);
 
@@ -142,7 +141,7 @@ namespace Triangulation {
         std::vector<AntSolution> resolve_conflicts(const std::vector<AntSolution>& solutions);
         void applyAntSolution(const AntSolution& solution, CDT& cdt);
 
-        void UpdatePheromones(const std::vector<AntSolution>& solutions, double lambda, double alpha, double beta);
+        void UpdatePheromones(std::map<CDT::Face_handle, std::map<Point, double>>& pheromone,const std::vector<AntSolution>& solutions, double lambda, double alpha, double beta);
         void copyTriangulation(const CDT& source, CDT& destination);
     };
 }
