@@ -143,6 +143,9 @@ namespace Triangulation {
 
         void UpdatePheromones(std::map<CDT::Face_handle, std::map<Point, double>>& pheromone,const std::vector<AntSolution>& solutions, double lambda, double alpha, double beta);
         void copyTriangulation(const CDT& source, CDT& destination);
+
+
+        std::string selectStrategy(const std::vector<std::pair<std::string, double>>& method_probabilities, double total_probability);
     };
 }
 

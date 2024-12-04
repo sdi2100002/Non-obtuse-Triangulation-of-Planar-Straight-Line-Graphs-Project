@@ -1086,8 +1086,26 @@ namespace Triangulation {
         return options;
     }
 
-    void CDTProcessor::antColonyOptimization(CDT& cdt, double alpha, double beta, double xi, double psi,int lambda, int num_cycles, int num_ants) {
+    std::string CDTProcessor::selectStrategy(const std::vector<std::pair<std::string, double>>& method_probabilities, double total_probability) {
+        if (total_probability <= 0.0) return "";
+
+        double random_value = static_cast<double>(rand()) / RAND_MAX * total_probability;
+        double cumulative_probability = 0.0;
+
+        for (const auto& method_prob : method_probabilities) {
+            cumulative_probability += method_prob.second;
+            if (random_value <= cumulative_probability) {
+                return method_prob.first;
+            }
+        }
+
+        return ""; // Δεν πρέπει να φτάσουμε εδώ
+    }
+
+
+    void CDTProcessor::antColonyOptimization(CDT& cdt, double alpha, double beta, double xi, double psi, int lambda, int num_cycles, int num_ants) {
         std::map<CDT::Face_handle, std::map<Point, double>> pheromone;
+
         // Αρχικοποίηση φερομονών 
         for (auto face = cdt.finite_faces_begin(); face != cdt.finite_faces_end(); ++face) {
             auto steiner_options = generateSteinerOptions(face);
@@ -1114,34 +1132,58 @@ namespace Triangulation {
                     }
                 }
 
-                if (candidate_faces.empty()){
-                    std::cout<<"1 CONTINUE\n\n";
+                if (candidate_faces.empty()) {
                     continue;
                 }
 
                 std::shuffle(candidate_faces.begin(), candidate_faces.end(), std::default_random_engine());
-                
+
                 for (auto& face : candidate_faces) {
                     // Υπολογισμός πιθανοτήτων επιλογής Steiner σημείων
                     auto steiner_options = generateSteinerOptions(face);
-                    if (steiner_options.empty()){
-                        std::cout<<"2 CONTINUE\n\n";
+                    if (steiner_options.empty()) {
                         continue;
                     }
 
                     double total_probability = 0.0;
                     std::vector<std::pair<Point, double>> probabilities;
 
-                    for (const auto& point_option : steiner_options) {
-                        double tau = std::pow(pheromone[face][point_option], xi);
-                        double eta = calculateHeuristic(face->vertex(0)->point(), face->vertex(1)->point(), face->vertex(2)->point(), "circumcenter");
+                    // Διαθέσιμες μέθοδοι (εξαιρείται η "projection")
+                    std::vector<std::string> methods = {"circumcenter", "midpoint", "midpoint"};
+
+                    // Υπολογισμός πιθανότητας για κάθε μέθοδο
+                    std::vector<std::pair<std::string, double>> method_probabilities;
+                    double total_method_probability = 0.0;
+
+                    for (const auto& method : methods) {
+                        double method_tau = 1.0; // Αρχική φερομόνη για τη μέθοδο (αν χρειαστεί, μπορεί να προσαρμοστεί)
+                        double method_eta = calculateHeuristic(face->vertex(0)->point(), face->vertex(1)->point(), face->vertex(2)->point(), method);
+                        double method_probability = std::pow(method_tau, xi) * std::pow(method_eta, psi);
+                        method_probabilities.emplace_back(method, method_probability);
+                        total_method_probability += method_probability;
+                    }
+
+                    // Επιλογή μεθόδου με βάση τις πιθανότητες
+                    std::string selected_method = selectStrategy(method_probabilities, total_method_probability);
+
+                    if (selected_method.empty()) {
+                        std::cout<<"No method selected fall back to circumcenter\n\n";
+                        selected_method = "circumcenter";
+                    }
+
+                    // Υπολογισμός πιθανότητας για κάθε Steiner σημείο
+                    for (const auto& option : pheromone[face]) {
+                        double tau = std::pow(option.second, xi); // Φερομόνη του σημείου
+                        double eta = calculateHeuristic(face->vertex(0)->point(), face->vertex(1)->point(), face->vertex(2)->point(), selected_method);
+                        if (tau == 0.0 || eta == 0.0) {
+                            continue;
+                        }
                         double probability = tau * std::pow(eta, psi);
-                        probabilities.emplace_back(point_option, probability);
+                        probabilities.emplace_back(option.first, probability);
                         total_probability += probability;
                     }
 
-                    if (total_probability <= 0.0){
-                        std::cout<<"3 CONTINUE\n\n";
+                    if (total_probability <= 0.0) {
                         continue;
                     }
 
@@ -1155,11 +1197,8 @@ namespace Triangulation {
                     int new_obtuse_count = countObtuseTriangles(temp_cdt);
                     double energy_gain = best_obtuse_count - new_obtuse_count;
 
-                    //if (energy_gain > 0) {
-                        AntSolution solution = {face, selected_point, energy_gain};
-                        ant_solutions.push_back(solution);
-                        //ant_solutions.push_back({face, selected_point, energy_gain});
-                    //}
+                    AntSolution solution = {face, selected_point, energy_gain};
+                    ant_solutions.push_back(solution);
                 }
 
                 all_solutions.insert(all_solutions.end(), ant_solutions.begin(), ant_solutions.end());
@@ -1183,7 +1222,7 @@ namespace Triangulation {
             }
 
             // Ενημέρωση φερομονών
-            UpdatePheromones(pheromone,resolved_solutions, alpha, beta, xi);
+            UpdatePheromones(pheromone, resolved_solutions, alpha, beta, xi);
 
             std::cout << "[DEBUG] Cycle " << cycle + 1 << ": Best obtuse triangles: " << best_obtuse_count << std::endl;
         }
@@ -1193,6 +1232,154 @@ namespace Triangulation {
         std::cout << "Total obtuse triangles after ant colony: " << countObtuseTriangles(cdt) << std::endl;
         CGAL::draw(cdt);
     }
+
+
+
+    // void CDTProcessor::antColonyOptimization(CDT& cdt, double alpha, double beta, double xi, double psi,int lambda, int num_cycles, int num_ants) {
+    //     std::map<CDT::Face_handle, std::map<Point, double>> pheromone;
+    //     // Αρχικοποίηση φερομονών 
+    //     for (auto face = cdt.finite_faces_begin(); face != cdt.finite_faces_end(); ++face) {
+    //         auto steiner_options = generateSteinerOptions(face);
+    //         for (const auto& point_option : steiner_options) {
+    //             pheromone[face][point_option] = 1.0; // Αρχική τιμή φερομονών
+    //         }
+    //     }
+
+    //     CDT best_cdt;
+    //     copyTriangulation(cdt, best_cdt);
+    //     int best_obtuse_count = countObtuseTriangles(best_cdt);
+
+    //     for (int cycle = 0; cycle < num_cycles; ++cycle) {
+    //         std::vector<AntSolution> all_solutions; // Συνολικές λύσεις μυρμηγκιών
+
+    //         for (int ant = 0; ant < num_ants; ++ant) {
+    //             std::vector<AntSolution> ant_solutions; // Λύσεις του συγκεκριμένου μυρμηγκιού
+
+    //             // Επιλογή τριγώνων στην τύχη
+    //             std::vector<CDT::Face_handle> candidate_faces;
+    //             for (auto face = cdt.finite_faces_begin(); face != cdt.finite_faces_end(); ++face) {
+    //                 if (isObtuseTriangle(face->vertex(0)->point(), face->vertex(1)->point(), face->vertex(2)->point())) {
+    //                     candidate_faces.push_back(face);
+    //                 }
+    //             }
+
+    //             if (candidate_faces.empty()){
+    //                 std::cout<<"1 CONTINUE\n\n";
+    //                 continue;
+    //             }
+
+    //             std::shuffle(candidate_faces.begin(), candidate_faces.end(), std::default_random_engine());
+                
+    //             for (auto& face : candidate_faces) {
+    //                 // Υπολογισμός πιθανοτήτων επιλογής Steiner σημείων
+    //                 auto steiner_options = generateSteinerOptions(face);
+    //                 if (steiner_options.empty()){
+    //                     std::cout<<"2 CONTINUE\n\n";
+    //                     continue;
+    //                 }
+
+    //                 double total_probability = 0.0;
+    //                 std::vector<std::pair<Point, double>> probabilities;
+
+    //                 // Διαθέσιμες μέθοδοι (εξαιρείται η "projection")
+    //                 std::vector<std::string> methods = {"circumcenter", "midpoint", "incenter"};
+
+    //                 // Υπολογισμός πιθανότητας για κάθε μέθοδο
+    //                 std::vector<std::pair<std::string, double>> method_probabilities;
+    //                 double total_method_probability = 0.0;
+                    
+
+    //                 for (const auto& method : methods) {
+    //                     double method_tau = 1.0; // Αρχική φερομόνη για τη μέθοδο (αν χρειαστεί, μπορεί να προσαρμοστεί)
+    //                     double method_eta = calculateHeuristic(face->vertex(0)->point(), face->vertex(1)->point(), face->vertex(2)->point(), method); // Υπολογισμός μετρικής για τη μέθοδο
+    //                     double method_probability = std::pow(method_tau, xi) * std::pow(method_eta, psi);
+    //                     method_probabilities.emplace_back(method, method_probability);
+    //                     total_method_probability += method_probability;
+    //                 }
+
+    //                 // Επιλογή μεθόδου με βάση τις πιθανότητες
+    //                 std::string selected_method = selectStrategy(method_probabilities, total_method_probability);
+
+    //                 if (selected_method.empty()) {
+    //                     std::cerr << "[DEBUG] No valid method selected." << std::endl;
+    //                     continue;
+    //                 }
+
+    //                 // Τώρα χρησιμοποιούμε τη μέθοδο που επιλέχθηκε
+    //                 double tau = std::pow(option.second, xi);
+    //                 double eta = calculateHeuristic(face->vertex(0)->point(), face->vertex(1)->point(), face->vertex(2)->point(), selected_method);
+
+    //                 if (tau == 0.0 || eta == 0.0) {
+    //                     std::cerr << "[DEBUG] Skipping option with zero tau or eta for method: " << selected_method << std::endl;
+    //                     continue;
+    //                 }
+
+    //                 double probability = tau * std::pow(eta, psi);
+    //                 probabilities.emplace_back(option.first, probability);
+    //                 total_probability += probability;
+
+    //                 // for (const auto& point_option : steiner_options) {
+    //                 //     double tau = std::pow(pheromone[face][point_option], xi);
+    //                 //     double eta = calculateHeuristic(face->vertex(0)->point(), face->vertex(1)->point(), face->vertex(2)->point(), "circumcenter");
+    //                 //     double probability = tau * std::pow(eta, psi);
+    //                 //     probabilities.emplace_back(point_option, probability);
+    //                 //     total_probability += probability;
+    //                 // }
+
+    //                 if (total_probability <= 0.0){
+    //                     std::cout<<"3 CONTINUE\n\n";
+    //                     continue;
+    //                 }
+
+    //                 // Επιλογή σημείου με πιθανότητα
+    //                 Point selected_point = selectSteinerPoint(probabilities, total_probability);
+
+    //                 // Προσομοίωση προσθήκης σημείου
+    //                 CDT temp_cdt;
+    //                 copyTriangulation(cdt, temp_cdt);
+    //                 temp_cdt.insert(selected_point);
+    //                 int new_obtuse_count = countObtuseTriangles(temp_cdt);
+    //                 double energy_gain = best_obtuse_count - new_obtuse_count;
+
+    //                 //if (energy_gain > 0) {
+    //                     AntSolution solution = {face, selected_point, energy_gain};
+    //                     ant_solutions.push_back(solution);
+    //                     //ant_solutions.push_back({face, selected_point, energy_gain});
+    //                 //}
+    //             }
+
+    //             all_solutions.insert(all_solutions.end(), ant_solutions.begin(), ant_solutions.end());
+    //         }
+
+    //         // Επίλυση συγκρούσεων μεταξύ λύσεων μυρμηγκιών
+    //         std::vector<AntSolution> resolved_solutions = resolve_conflicts(all_solutions);
+
+    //         // Εφαρμογή λύσεων στο CDT
+    //         CDT merged_cdt;
+    //         copyTriangulation(best_cdt, merged_cdt);
+    //         for (const auto& solution : resolved_solutions) {
+    //             applyAntSolution(solution, merged_cdt);
+    //         }
+
+    //         // Ενημέρωση του καλύτερου τριγωνισμού
+    //         int current_obtuse_count = countObtuseTriangles(merged_cdt);
+    //         if (current_obtuse_count < best_obtuse_count) {
+    //             best_obtuse_count = current_obtuse_count;
+    //             copyTriangulation(merged_cdt, best_cdt);
+    //         }
+
+    //         // Ενημέρωση φερομονών
+    //         UpdatePheromones(pheromone,resolved_solutions, alpha, beta, xi);
+
+    //         std::cout << "[DEBUG] Cycle " << cycle + 1 << ": Best obtuse triangles: " << best_obtuse_count << std::endl;
+    //     }
+
+    //     // Επιστροφή του καλύτερου τριγωνισμού
+    //     copyTriangulation(best_cdt, cdt);
+    //     std::cout << "Total obtuse triangles after ant colony: " << countObtuseTriangles(cdt) << std::endl;
+    //     CGAL::draw(cdt);
+    // }
+    
 
 
 
