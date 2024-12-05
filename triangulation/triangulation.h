@@ -121,7 +121,7 @@ namespace Triangulation {
 
         double calculateEnergy(const CDT& cdt, double alpha, double beta,int numberOfSteinerPoints);
     
-        void antColonyOptimization(CDT& cdt, double alpha, double beta, double xi, double psi,int lambda, int num_cycles, int num_ants);
+        void antColonyOptimization(CDT& cdt, double alpha, double beta, double xi, double psi, int lambda, int num_ants, int num_cycles);
 
         double calculateHeuristic(const Point& p1,const Point& p2,const Point&p3,const std::string& strategy);
     

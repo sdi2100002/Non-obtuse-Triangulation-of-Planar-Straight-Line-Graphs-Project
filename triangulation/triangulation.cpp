@@ -1095,7 +1095,7 @@ namespace Triangulation {
         return ""; // Δεν πρέπει να φτάσουμε εδώ
     }
 
-    void CDTProcessor::antColonyOptimization(CDT& cdt, double alpha, double beta, double xi, double psi, int lambda, int num_cycles, int num_ants) {
+    void CDTProcessor::antColonyOptimization(CDT& cdt, double alpha, double beta, double xi, double psi, int lambda, int num_ants, int num_cycles) {
         std::map<CDT::Face_handle, std::map<Point, double>> pheromone;
 
         // Αρχικοποίηση φερομονών 
@@ -1110,6 +1110,8 @@ namespace Triangulation {
         copyTriangulation(cdt, best_cdt);
         int best_obtuse_count = countObtuseTriangles(best_cdt);
         int totalSteinerInserted=0;
+
+        double best_energy=calculateEnergy(best_cdt,alpha,beta,totalSteinerInserted);
 
         for (int cycle = 0; cycle < num_cycles; ++cycle) {
             std::vector<AntSolution> all_solutions; // Συνολικές λύσεις μυρμηγκιών
@@ -1210,15 +1212,16 @@ namespace Triangulation {
 
             // Ενημέρωση του καλύτερου τριγωνισμού
             int current_obtuse_count = countObtuseTriangles(merged_cdt);
-            if (current_obtuse_count < best_obtuse_count) {
-                best_obtuse_count = current_obtuse_count;
-                copyTriangulation(merged_cdt, best_cdt);
+            double current_energy=calculateEnergy(merged_cdt,alpha,beta,totalSteinerInserted);
+
+            if(current_energy < best_energy || current_obtuse_count < best_obtuse_count){
+                best_energy=current_obtuse_count == 0 ? 0 : current_energy;
+                best_obtuse_count=current_obtuse_count;
+                copyTriangulation(merged_cdt,best_cdt);
             }
 
             // Ενημέρωση φερομονών
             UpdatePheromones(pheromone, resolved_solutions, alpha, beta, xi);
-
-            std::cout << "[DEBUG] Cycle " << cycle + 1 << ": Best obtuse triangles: " << best_obtuse_count << std::endl;
         }
 
         // Επιστροφή του καλύτερου τριγωνισμού
