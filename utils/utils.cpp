@@ -197,7 +197,7 @@ std::vector<std::pair<double, double>> createPointsVector(const std::vector<int>
 // This function is used to process triangulation using the specified points and constraints
 void CallprocessTriangulation(const std::vector<std::pair<double, double>>& points, const std::vector<std::pair<int, int>>& additional_constraints, const std::vector<int>& region_boundary, const std::string& instance_uid,const std::string& method,const std::map<std::string, double>& parameters , bool delaunay) {
     // Create a CDTProcessor instance with the given points, constraints, boundary, and instance UID
-    Triangulation::CDTProcessor cdtProcessor(points, additional_constraints, region_boundary, instance_uid, method, parameters);
+    Triangulation::CDTProcessor cdtProcessor(points, additional_constraints, region_boundary, instance_uid, method, parameters,delaunay);
     // Call the main process which we are using to perform triangulation
     if(delaunay){
         cdtProcessor.processTriangulation();

@@ -11,8 +11,8 @@
 namespace Triangulation {
 
     // Constructor 
-    CDTProcessor::CDTProcessor(const std::vector<std::pair<double, double>>& points, const std::vector<std::pair<int, int>>& constraints, const std::vector<int>& region_boundary,const std::string& instance_uid,const std::string& method,const std::map<std::string,double>& parameters) 
-        : points_(points), constraints_(constraints), region_boundary_(region_boundary) , instance_uid_(instance_uid) , method_(method) , parameters_(parameters) {
+    CDTProcessor::CDTProcessor(const std::vector<std::pair<double, double>>& points, const std::vector<std::pair<int, int>>& constraints, const std::vector<int>& region_boundary,const std::string& instance_uid,const std::string& method,const std::map<std::string,double>& parameters,const bool delaunay) 
+        : points_(points), constraints_(constraints), region_boundary_(region_boundary) , instance_uid_(instance_uid) , method_(method) , parameters_(parameters),delaunay_(delaunay) {
     
         //Adding the boundary constraints (the region boundary is treated as a contraint)
         for (size_t i = 0; i < region_boundary_.size(); ++i) {
@@ -775,7 +775,8 @@ namespace Triangulation {
                         steiner_point = calculate_perpendicular_bisector_point(p1, p2, p3); 
                     } else if (strategy == 5) {
                         steiner_point = projectPointOntoTriangle(Point(0, 0), p1, p2, p3);
-                    } else if(strategy == 6){
+                    } else if(strategy == 6 && !delaunay_){
+                        std::cout<<"METHOD 6\n\n";
                         // TODO if delaunay == true dont call strategy 6
                         steiner_point=getMeanAdjacentPoint(fit,best_cdt); //TODO SEGMETATION AFTER 1K LOOPS
                         if (steiner_point.x()==0 && steiner_point.y()==0){
@@ -1108,6 +1109,7 @@ namespace Triangulation {
         CDT best_cdt;
         copyTriangulation(cdt, best_cdt);
         int best_obtuse_count = countObtuseTriangles(best_cdt);
+        int totalSteinerInserted=0;
 
         for (int cycle = 0; cycle < num_cycles; ++cycle) {
             std::vector<AntSolution> all_solutions; // Συνολικές λύσεις μυρμηγκιών
@@ -1185,6 +1187,7 @@ namespace Triangulation {
                     CDT temp_cdt;
                     copyTriangulation(cdt, temp_cdt);
                     temp_cdt.insert(selected_point);
+                    totalSteinerInserted++;
                     int new_obtuse_count = countObtuseTriangles(temp_cdt);
                     double energy_gain = best_obtuse_count - new_obtuse_count;
 
