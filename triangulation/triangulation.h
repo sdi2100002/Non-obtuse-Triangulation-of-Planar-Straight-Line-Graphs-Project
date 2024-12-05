@@ -138,6 +138,10 @@ namespace Triangulation {
         void copyTriangulation(const CDT& source, CDT& destination);
 
         std::string selectStrategy(const std::vector<std::pair<std::string, double>>& method_probabilities, double total_probability);
+        std::string toFraction(double value);
+        void writeOutputToFile(const std::string& filepath,const std::vector<std::string>& steiner_points_x,const std::vector<std::string>& steiner_points_y,const std::vector<std::pair<int, int>>& edges,int obtuse_count);
+    
+        int getPointIndex(const Point& point, const std::vector<std::pair<double, double>>& points);
     };
 }
 

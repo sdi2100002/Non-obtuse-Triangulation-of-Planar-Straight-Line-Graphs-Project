@@ -5,6 +5,8 @@
 #include <CGAL/algorithm.h>
 #include <CGAL/draw_triangulation_2.h>
 #include <utility>
+#include <numeric> 
+#include <set>
 #include <random>
 #include "../CGAL-5.6.1/include/CGAL/convex_hull_2.h"
 
@@ -719,6 +721,10 @@ namespace Triangulation {
         int obtuseCount = countObtuseTriangles(cdt);
         int newL = static_cast<int>(L);
 
+        // Data for output
+        std::vector<std::string> steiner_points_x;
+        std::vector<std::string> steiner_points_y;
+        std::vector<std::pair<int, int>> steiner_edges;
 
         while (hasObtuse && counter < newL) {
             hasObtuse = false;  
@@ -776,7 +782,6 @@ namespace Triangulation {
                     } else if (strategy == 5) {
                         steiner_point = projectPointOntoTriangle(Point(0, 0), p1, p2, p3);
                     } else if(strategy == 6 && !delaunay_){
-                        std::cout<<"METHOD 6\n\n";
                         // TODO if delaunay == true dont call strategy 6
                         steiner_point=getMeanAdjacentPoint(fit,best_cdt); //TODO SEGMETATION AFTER 1K LOOPS
                         if (steiner_point.x()==0 && steiner_point.y()==0){
@@ -797,8 +802,9 @@ namespace Triangulation {
 
                     // Simulate insertion of the Steiner point
                     CDT new_cdt = cdt;  // Copy the current triangulation
+                    CDT::Vertex_handle new_vertex;
                     try {
-                        auto new_vertex = new_cdt.insert(steiner_point);
+                        new_vertex = new_cdt.insert(steiner_point);
                         processConvexPolygon(new_cdt);  // Ensure local re-triangulation
                     } catch (const CGAL::Precondition_exception& e) {
                         std::cerr << "Failed to insert Steiner point: " << e.what() << "\n";
@@ -813,6 +819,11 @@ namespace Triangulation {
                         std::cout<<"Placed a steiner : " << steiner_point << std::endl ;
                         best_cdt = new_cdt;
                         best_obtuse_count = new_obtuse_count;
+                        // Store Steiner point
+                        std::string x_frac = toFraction(steiner_point.x());
+                        std::string y_frac = toFraction(steiner_point.y());
+                        steiner_points_x.push_back(x_frac);
+                        steiner_points_y.push_back(y_frac);
                     }
                 }
 
@@ -825,7 +836,22 @@ namespace Triangulation {
         }
         std::cout<<"Final obtuse triangles count : " << countObtuseTriangles(cdt) << std::endl;
         CGAL::draw(cdt);
+        
+        writeOutputToFile("../output/output.json", steiner_points_x, steiner_points_y, steiner_edges, countObtuseTriangles(cdt));
     }
+
+
+    int CDTProcessor::getPointIndex(const Point& point, const std::vector<std::pair<double, double>>& points) {
+        for (size_t i = 0; i < points.size(); ++i) {
+            // Compare CGAL Point with std::pair<double, double>
+            if (std::abs(points[i].first - point.x()) < 1e-9 &&
+                std::abs(points[i].second - point.y()) < 1e-9) {
+                return static_cast<int>(i);
+            }
+        }
+        return -1;  // Return -1 if the point is not found
+    }
+
 
     CDT CDTProcessor::createCDT() {
         CDT cdt;
@@ -1330,5 +1356,101 @@ namespace Triangulation {
             return 0.0;
         }
     }
+
+
+
+    // Βοηθητική συνάρτηση για τη μετατροπή αριθμών σε κλάσματα
+    std::string CDTProcessor::toFraction(double value) {
+        constexpr double epsilon = 1e-6;
+        int sign = value < 0 ? -1 : 1;  
+        value = std::fabs(value);       
+        long long numerator = 1, denominator = 1;
+
+        while (std::fabs(value * denominator - std::round(value * denominator)) > epsilon) {
+            ++denominator;
+        }
+        numerator = static_cast<long long>(std::round(value * denominator));
+
+        long long gcd = std::gcd(numerator, denominator);
+        return (sign < 0 ? "-" : "") + std::to_string(numerator / gcd) + "/" + std::to_string(denominator / gcd);
+    }
+
+  void CDTProcessor::writeOutputToFile(
+        const std::string& filepath,
+        const std::vector<std::string>& steiner_points_x,
+        const std::vector<std::string>& steiner_points_y,
+        const std::vector<std::pair<int, int>>& steiner_edges,
+        int obtuse_count) 
+    {
+        namespace json = boost::json;
+
+        // Create JSON object
+        json::object output;
+
+        // Add content metadata
+        output["content_type"] = "CG_SHOP_2025_Solution";
+        output["instance_uid"] = instance_uid_; // Assumes access to `instance_uid_`
+        output["method"] = method_;            // Assumes access to `method_`
+
+        // Convert parameters to JSON object
+        json::object parameters_json;
+        for (const auto& param : parameters_) {
+            parameters_json[param.first] = json::value_from(param.second);
+        }
+        output["parameters"] = parameters_json;
+
+        // Directly add Steiner points
+        json::array steiner_points_x_json(steiner_points_x.begin(), steiner_points_x.end());
+        json::array steiner_points_y_json(steiner_points_y.begin(), steiner_points_y.end());
+
+        output["steiner_points_x"] = steiner_points_x_json;
+        output["steiner_points_y"] = steiner_points_y_json;
+
+        // Handle edges
+        if (steiner_edges.empty()) {
+            std::cout << "EMPTY EDGES\n\n";
+        }
+
+        json::array edges_json;
+        for (const auto& edge : steiner_edges) {
+            json::array edge_pair = {edge.first, edge.second};
+            edges_json.push_back(edge_pair);
+        }
+        output["edges"] = edges_json;
+
+        // Add remaining data
+        output["obtuse_count"] = obtuse_count;
+
+        // Write to file
+        std::ofstream file(filepath);
+        if (!file.is_open()) {
+            throw std::runtime_error("Failed to open output file: " + filepath);
+        }
+
+        // Write JSON to file with improved formatting
+        file << "{\n";
+        file << "  \"content_type\": " << json::serialize(output["content_type"]) << "," << std::endl;
+        file << "  \"instance_uid\": " << json::serialize(output["instance_uid"]) << "," << std::endl;
+        file << "  \"method\": " << json::serialize(output["method"]) << "," << std::endl;
+
+        // Write parameters
+        file << "  \"parameters\": " << json::serialize(output["parameters"]) << "," << std::endl;
+
+        // Write Steiner points
+        file << "  \"steiner_points_x\": " << json::serialize(output["steiner_points_x"]) << "," << std::endl;
+        file << "  \"steiner_points_y\": " << json::serialize(output["steiner_points_y"]) << "," << std::endl;
+
+        // Write edges
+        file << "  \"edges\": " << json::serialize(output["edges"]) << "," << std::endl;
+
+        // Write obtuse count
+        file << "  \"obtuse_count\": " << output["obtuse_count"] << std::endl;
+        file << "}" << std::endl;
+
+        file.close();
+
+        std::cout << "Output written to " << filepath << std::endl;
+    }
+
 
 }
