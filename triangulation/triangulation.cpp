@@ -656,26 +656,27 @@ namespace Triangulation {
    
     }
 
+    //This function is used to select and call the method requested 
     void CDTProcessor::selectMethod(CDT &cdt, const std::string& method,const std::map<std::string, double>& parameters){
-        if (method == "local") {
+        if (method == "local") { //Local search moethod
             std::cout << "Selected method: Local Search\n";
             std::cout << "Parameters:\n";
             for (const auto& [key, value] : parameters) {
                 std::cout << "  " << key << ": " << value << "\n";
             }
-            // Placeholder for local search logic
+            // Execute local search
             std::cout << "Executing local search...\n";
             auto iter = parameters.begin();
             double value = iter->second;
             localSearch(cdt, value);
         } 
-        else if (method == "sa") { // Simulated Annealing
+        else if (method == "sa") { // Simulated Annealing method
             std::cout << "Selected method: Simulated Annealing\n";
             std::cout << "Parameters:\n";
             for (const auto& [key, value] : parameters) {
                 std::cout << "  " << key << ": " << value << "\n";
             }
-            // Placeholder for simulated annealing logic
+            //Execute simulated annealing logic
             std::cout << "Executing simulated annealing...\n";
 
             // Extract parameters for Simulated Annealing
@@ -688,12 +689,13 @@ namespace Triangulation {
 
             simulatedAnnealing(cdt,alpha,beta,L);
         } 
-        else if (method == "ant") { // Ant Colony Optimization
+        else if (method == "ant") { // Ant Colony Optimization method
             std::cout << "Selected method: Ant Colony Optimization\n";
             std::cout << "Parameters:\n";
             for (const auto& [key, value] : parameters) {
                 std::cout << "  " << key << ": " << value << "\n";
             }
+            //Extract and use the parameters needed to perfrorm ant colony
             double alpha = (parameters.find("alpha") != parameters.end()) ? parameters.at("alpha") : 0.0;
             double beta = (parameters.find("beta") != parameters.end()) ? parameters.at("beta") : 0.0;
             double xi = (parameters.find("xi") != parameters.end()) ? parameters.at("xi") : 1.0;
@@ -704,18 +706,19 @@ namespace Triangulation {
 
             std::cout<<"alpha: " << alpha << std::endl;
             
-            // Placeholder for ant colony optimization logic
+            
             std::cout << "Executing ant colony optimization...\n";
 
             antColonyOptimization(cdt,alpha,beta,xi,psi,lambda,kappa,L);
         } 
         else {
-            // Handle invalid method input
+            // Unknow method given
             std::cerr << "Error: Unknown method \"" << method << "\".\n";
             std::cerr << "Available methods: local, sa, ant\n";
         }
     }
 
+    //This function is used to perform the local search method (simular to our own processTriangulation() method)
     void CDTProcessor::localSearch(CDT& cdt, double L) {
         int counter = 0;
         bool hasObtuse = true;
@@ -723,13 +726,13 @@ namespace Triangulation {
         int obtuseCount = countObtuseTriangles(cdt);
         int newL = static_cast<int>(L);
 
-        // Data for output
+        //Used two variables to store the steiners one with frac and the other with double
         std::vector<std::string> steiner_points_x;
         std::vector<std::string> steiner_points_y;
         std::vector<std::pair<int, int>> steiner_edges;
 
-        std::vector<double> steiner_points_x_double;  // New variable to store x as double
-        std::vector<double> steiner_points_y_double;  // New variable to store y as double
+        std::vector<double> steiner_points_x_double;  
+        std::vector<double> steiner_points_y_double; 
 
         while (hasObtuse && counter < newL) {
             hasObtuse = false;  
@@ -761,6 +764,7 @@ namespace Triangulation {
                 }
             }
 
+            //For each obtuse triangle
             for (const auto& fit : obtuse_triangles){
                 auto p1 = fit->vertex(0)->point();
                 auto p2 = fit->vertex(1)->point();
@@ -769,11 +773,11 @@ namespace Triangulation {
                 CDT best_cdt = cdt;  
                 int best_obtuse_count = current_obtuse_count;
 
-                // Evaluate Steiner point strategies
+                //Evaluate all strategies
                 for (int strategy = 0; strategy <= 6; ++strategy) {
                     Point steiner_point;
 
-                    // Generate Steiner points using different strategies
+                    //Find the steiner for each method
                     if (strategy == 0) {
                         steiner_point = CGAL::circumcenter(p1, p2, p3);
                     } else if (strategy == 1) {
@@ -787,7 +791,6 @@ namespace Triangulation {
                     } else if (strategy == 5) {
                         steiner_point = projectPointOntoTriangle(Point(0, 0), p1, p2, p3);
                     } else if(strategy == 6 && !delaunay_){
-                        // TODO if delaunay == true dont call strategy 6
                         steiner_point=getMeanAdjacentPoint(fit,best_cdt); //TODO SEGMETATION AFTER 1K LOOPS
                         if (steiner_point.x()==0 && steiner_point.y()==0){
                             continue;
@@ -805,8 +808,8 @@ namespace Triangulation {
                         continue;
                     }
 
-                    // Simulate insertion of the Steiner point
-                    CDT new_cdt = cdt;  // Copy the current triangulation
+                    
+                    CDT new_cdt = cdt; 
                     CDT::Vertex_handle new_vertex;
                     try {
                         new_vertex = new_cdt.insert(steiner_point);
@@ -864,7 +867,7 @@ namespace Triangulation {
 
         std::cout << "Total vertices in CDT after insertion: " << index << std::endl;
 
-        // Find edges involving Steiner points
+        // Find the steiner point edges
         std::set<int> steiner_indices;
         for (size_t i = 0; i < steiner_points_x_double.size(); ++i) {
             double x = steiner_points_x_double[i];
@@ -888,7 +891,6 @@ namespace Triangulation {
 
         steiner_edges.clear();
 
-        // Collect edges involving Steiner points
         for (auto eit = cdt.finite_edges_begin(); eit != cdt.finite_edges_end(); ++eit) {
             auto face = eit->first;
             int index = eit->second;
@@ -916,14 +918,13 @@ namespace Triangulation {
         }
 
 
-        
         writeOutputToFile("../output/output.json", steiner_points_x, steiner_points_y, steiner_edges, countObtuseTriangles(cdt));
     }
 
-
+    //This function finds the index of a given CGAL point in a vector
     int CDTProcessor::getPointIndex(const Point& point, const std::vector<std::pair<double, double>>& points) {
         for (size_t i = 0; i < points.size(); ++i) {
-            // Compare CGAL Point with std::pair<double, double>
+            // Compare CGAL Point with the pair
             if (std::abs(points[i].first - point.x()) < 1e-9 &&
                 std::abs(points[i].second - point.y()) < 1e-9) {
                 return static_cast<int>(i);
@@ -932,7 +933,7 @@ namespace Triangulation {
         return -1;  // Return -1 if the point is not found
     }
 
-
+    //This function creates a CDT using CGAL
     CDT CDTProcessor::createCDT() {
         CDT cdt;
         std::vector<Point> cgal_points;
@@ -949,6 +950,7 @@ namespace Triangulation {
         return cdt;
     }
 
+    //This function implements the method SimulatedAnnealing
     void CDTProcessor::simulatedAnnealing(CDT& cdt,double alpha,double beta,int L){
         // Step 1: Compute initial energy of the triangulation
         int countOfSteinerPoints=0;
@@ -958,17 +960,19 @@ namespace Triangulation {
         // Step 2: Initialize temperature
         double temperature = 1.0;
 
+
+        //Those variables are using to write the output
         std::vector<std::string> steiner_points_x;
         std::vector<std::string> steiner_points_y;
         std::vector<std::pair<int, int>> steiner_edges;
 
-        std::vector<double> steiner_points_x_double;  // New variable to store x as double
-        std::vector<double> steiner_points_y_double;  // New variable to store y as double
+        std::vector<double> steiner_points_x_double;  
+        std::vector<double> steiner_points_y_double;  
         
 
         // Step 3: Main SA loop
         while (temperature >= 0) {
-            std::cout << "Current temperature: " << temperature << "\n";
+            //std::cout << "Current temperature: " << temperature << "\n";
 
             std::vector<CDT::Face_handle> faces;
             for (auto fit = cdt.finite_faces_begin();fit != cdt.finite_faces_end();++fit){
@@ -984,18 +988,17 @@ namespace Triangulation {
                 auto p2 = face->vertex(1)->point();
                 auto p3 = face->vertex(2)->point();
 
-                // Compute squared edge lengths
                 double a2 = squaredDistance(p2, p3);
                 double b2 = squaredDistance(p1, p3);
                 double c2 = squaredDistance(p1, p2);
 
                 if (isObtuseTriangle(p1,p2,p3)){
 
-                    // Step 5: Try different Steiner point strategies
+                    //For each strategy
                     for (int strategy = 0; strategy <= 5; ++strategy) {
                         Point steinerPoint;
 
-                        // Generate Steiner points using different strategies
+                        //Find the steiner point for each strategy
                         if (strategy == 0) {
                             steinerPoint = CGAL::circumcenter(p1, p2, p3);
                         } else if (strategy == 1) {
@@ -1010,7 +1013,7 @@ namespace Triangulation {
                             steinerPoint = projectPointOntoTriangle(Point(0, 0), p1, p2, p3);
                         }
 
-                        // Validate the Steiner point
+                        
                         if (!CGAL::is_finite(steinerPoint.x()) || !CGAL::is_finite(steinerPoint.y())) {
                             continue;
                         }
@@ -1053,7 +1056,7 @@ namespace Triangulation {
 
                                 steiner_points_x_double.push_back(steinerPoint.x());  // Store x as double
                                 steiner_points_y_double.push_back(steinerPoint.y());  // Store y as double
-                                std::cout << "Accepted new configuration. Energy: " << currentEnergy << ", Steiner points: " << countOfSteinerPoints << "\n";  
+                                //std::cout << "Accepted new configuration. Energy: " << currentEnergy << ", Steiner points: " << countOfSteinerPoints << "\n";  
                             }
                             break;
 
@@ -1136,14 +1139,14 @@ namespace Triangulation {
         writeOutputToFile("../output/output.json", steiner_points_x, steiner_points_y, steiner_edges, countObtuseTriangles(cdt));
     }
 
-    // Helper function to insert a Steiner point and update the CDT
+    // This function is used to insert a Steiner point and update the CDT
     void CDTProcessor::insertSteinerPoint(CDT& cdt, const std::pair<double, double>& point) {
         //std::cout<<"inserting inside function..." << std::endl; 
         CGAL::Epick::Point_2 steinerPoint(point.first, point.second);
         cdt.insert(steinerPoint);
     }
 
-    // Random number generator for uniform distribution
+    // This function creates a random number
     double CDTProcessor::getRandomUniform() {
         static std::random_device rd;
         static std::mt19937 gen(rd());
@@ -1151,13 +1154,16 @@ namespace Triangulation {
         return dis(gen);
     }
 
+    //This function is used to calculate the energy
     double CDTProcessor::calculateEnergy(const CDT& cdt, double alpha, double beta,int numberOfSteinerPoints) {
         int obtuseTriangles = countObtuseTriangles(cdt); 
         int steinerPoints = numberOfSteinerPoints;     
         return alpha * obtuseTriangles * obtuseTriangles  + beta * numberOfSteinerPoints;//TODO maybe change the obtuseTriangles^2 (based on the algorithm its only ^1)
     }
 
+
     Point CDTProcessor::getMeanAdjacentPoint(CDT::Face_handle face, CDT& cdt) {
+        //Take the vertices of the current face
         auto p1 = face->vertex(0)->point();
         auto p2 = face->vertex(1)->point();
         auto p3 = face->vertex(2)->point();
@@ -1214,14 +1220,15 @@ namespace Triangulation {
         return meanPoint;
     }
 
+    //This function is used to updatePheromones
     void CDTProcessor::UpdatePheromones(std::map<CDT::Face_handle, std::map<Point, double>>& pheromone,const std::vector<AntSolution>& solutions, double lambda, double alpha, double beta) {
         for (const auto& solution : solutions) {
-            // Εξάτμιση φερομόνης
+            //Evaporate pheromones for all steiner points
             for (auto& pheromone_pair : pheromone[solution.face]) {
                 pheromone_pair.second *= (1 - lambda);
             }
 
-            // Ενίσχυση φερομόνης
+            // Reinforce pheromone level for the steiner point selected
             pheromone[solution.face][solution.steiner_point] += (1.0 / (1 + alpha * solution.improvement_metric + beta));
         }
     }
@@ -1232,7 +1239,7 @@ namespace Triangulation {
 
     std::vector<AntSolution> CDTProcessor::resolve_conflicts(const std::vector<AntSolution>& solutions) {
         std::map<CDT::Face_handle, AntSolution> best_solutions;
-
+        //For each solution take only the one with the highest improvement metric for each face
         for (const auto& solution : solutions) {
             if (best_solutions.find(solution.face) == best_solutions.end() ||
                 solution.improvement_metric > best_solutions[solution.face].improvement_metric) {
@@ -1240,6 +1247,7 @@ namespace Triangulation {
             }
         }
 
+        //Collect and return the solutions
         std::vector<AntSolution> resolved_solutions;
         for (const auto& pair : best_solutions) {
             resolved_solutions.push_back(pair.second);
@@ -1247,6 +1255,7 @@ namespace Triangulation {
         return resolved_solutions;
     }
 
+    //This function is used to generate the steiner options
     std::vector<Point> CDTProcessor::generateSteinerOptions(const CDT::Face_handle& face) {
         std::vector<Point> options;
 
@@ -1254,7 +1263,7 @@ namespace Triangulation {
         Point p2 = face->vertex(1)->point();
         Point p3 = face->vertex(2)->point();
 
-        // Add options robustly
+        //Generate all steiner options using the available strategies
         try {
             options.push_back(CGAL::circumcenter(p1, p2, p3));
             options.push_back(calculate_incenter(p1, p2, p3));
@@ -1273,12 +1282,16 @@ namespace Triangulation {
         return options;
     }
 
+    //Select strategy based on probabilities
     std::string CDTProcessor::selectStrategy(const std::vector<std::pair<std::string, double>>& method_probabilities, double total_probability) {
+        // Return an empty string if the total probability is invalid less or equal than 0 
         if (total_probability <= 0.0) return "";
 
+        // Generate a random value between 0 and total probability
         double random_value = static_cast<double>(rand()) / RAND_MAX * total_probability;
         double cumulative_probability = 0.0;
 
+        //Loop through the strategies and find the one 
         for (const auto& method_prob : method_probabilities) {
             cumulative_probability += method_prob.second;
             if (random_value <= cumulative_probability) {
@@ -1286,13 +1299,14 @@ namespace Triangulation {
             }
         }
 
-        return ""; // Δεν πρέπει να φτάσουμε εδώ
+        return ""; 
     }
 
+    //This function implements the ant Colony method
     void CDTProcessor::antColonyOptimization(CDT& cdt, double alpha, double beta, double xi, double psi, int lambda, int num_ants, int num_cycles) {
         std::map<CDT::Face_handle, std::map<Point, double>> pheromone;
 
-        // Αρχικοποίηση φερομονών 
+        //init pheromones
         for (auto face = cdt.finite_faces_begin(); face != cdt.finite_faces_end(); ++face) {
             auto steiner_options = generateSteinerOptions(face);
             for (const auto& point_option : steiner_options) {
@@ -1307,13 +1321,23 @@ namespace Triangulation {
 
         double best_energy=calculateEnergy(best_cdt,alpha,beta,totalSteinerInserted);
 
+        //Those variables are used at the end of method to write the solution to .json
+        std::vector<std::string> steiner_points_x;
+        std::vector<std::string> steiner_points_y;
+        std::vector<std::pair<int, int>> steiner_edges;
+
+        std::vector<double> steiner_points_x_double;
+        std::vector<double> steiner_points_y_double;
+
+
+        //Loop through cycles
         for (int cycle = 0; cycle < num_cycles; ++cycle) {
-            std::vector<AntSolution> all_solutions; // Συνολικές λύσεις μυρμηγκιών
-
+            std::vector<AntSolution> all_solutions; 
+            //For each ant
             for (int ant = 0; ant < num_ants; ++ant) {
-                std::vector<AntSolution> ant_solutions; // Λύσεις του συγκεκριμένου μυρμηγκιού
+                std::vector<AntSolution> ant_solutions; 
 
-                // Επιλογή τριγώνων στην τύχη
+                //Select a random triangle
                 std::vector<CDT::Face_handle> candidate_faces;
                 for (auto face = cdt.finite_faces_begin(); face != cdt.finite_faces_end(); ++face) {
                     if (isObtuseTriangle(face->vertex(0)->point(), face->vertex(1)->point(), face->vertex(2)->point())) {
@@ -1328,31 +1352,32 @@ namespace Triangulation {
                 std::shuffle(candidate_faces.begin(), candidate_faces.end(), std::default_random_engine());
 
                 for (auto& face : candidate_faces) {
-                    // Υπολογισμός πιθανοτήτων επιλογής Steiner σημείων
+                    //Generate Steiner point options for the face
                     auto steiner_options = generateSteinerOptions(face);
                     if (steiner_options.empty()) {
                         continue;
                     }
 
+                    //Calculate selection probabilities for each method
                     double total_probability = 0.0;
                     std::vector<std::pair<Point, double>> probabilities;
 
-                    // Διαθέσιμες μέθοδοι (εξαιρείται η "projection")
+                    // Available methods for Steiner point generation
                     std::vector<std::string> methods = {"circumcenter", "midpoint", "midpoint"};
 
-                    // Υπολογισμός πιθανότητας για κάθε μέθοδο
+                    // Calculate probabilities for each Steiner point
                     std::vector<std::pair<std::string, double>> method_probabilities;
                     double total_method_probability = 0.0;
 
                     for (const auto& method : methods) {
-                        double method_tau = 1.0; // Αρχική φερομόνη για τη μέθοδο (αν χρειαστεί, μπορεί να προσαρμοστεί)
+                        double method_tau = 1.0; 
                         double method_eta = calculateHeuristic(face->vertex(0)->point(), face->vertex(1)->point(), face->vertex(2)->point(), method);
                         double method_probability = std::pow(method_tau, xi) * std::pow(method_eta, psi);
                         method_probabilities.emplace_back(method, method_probability);
                         total_method_probability += method_probability;
                     }
 
-                    // Επιλογή μεθόδου με βάση τις πιθανότητες
+                    //select a steiner based on probabilities
                     std::string selected_method = selectStrategy(method_probabilities, total_method_probability);
 
                     if (selected_method.empty()) {
@@ -1360,9 +1385,8 @@ namespace Triangulation {
                         selected_method = "circumcenter";
                     }
 
-                    // Υπολογισμός πιθανότητας για κάθε Steiner σημείο
                     for (const auto& option : pheromone[face]) {
-                        double tau = std::pow(option.second, xi); // Φερομόνη του σημείου
+                        double tau = std::pow(option.second, xi); 
                         double eta = calculateHeuristic(face->vertex(0)->point(), face->vertex(1)->point(), face->vertex(2)->point(), selected_method);
                         if (tau == 0.0 || eta == 0.0) {
                             continue;
@@ -1376,10 +1400,29 @@ namespace Triangulation {
                         continue;
                     }
 
-                    // Επιλογή σημείου με πιθανότητα
+                    
                     Point selected_point = selectSteinerPoint(probabilities, total_probability);
+                    
+                    // Store Steiner points
+                    std::string x_frac = toFraction(selected_point.x());
+                    std::string y_frac = toFraction(selected_point.y());
 
-                    // Προσομοίωση προσθήκης σημείου
+                    bool exists = false;
+                    for (size_t i = 0; i < steiner_points_x.size(); ++i) {
+                        if (steiner_points_x[i] == x_frac && steiner_points_y[i] == y_frac) {
+                            exists = true;
+                            break;
+                        }
+                    }
+
+                    if (!exists) {
+                        steiner_points_x.push_back(x_frac);
+                        steiner_points_y.push_back(y_frac);
+                        steiner_points_x_double.push_back(selected_point.x());
+                        steiner_points_y_double.push_back(selected_point.y());
+                    }
+
+                   // Simulate the addition of the selected Steiner point to a temporary CDT
                     CDT temp_cdt;
                     copyTriangulation(cdt, temp_cdt);
                     temp_cdt.insert(selected_point);
@@ -1390,21 +1433,21 @@ namespace Triangulation {
                     AntSolution solution = {face, selected_point, energy_gain};
                     ant_solutions.push_back(solution);
                 }
-
+                 // Add the current ant's solutions to the total solutions for this cycle
                 all_solutions.insert(all_solutions.end(), ant_solutions.begin(), ant_solutions.end());
             }
 
-            // Επίλυση συγκρούσεων μεταξύ λύσεων μυρμηγκιών
+            // Resolve conflicts between solutions proposed by different ants
             std::vector<AntSolution> resolved_solutions = resolve_conflicts(all_solutions);
 
-            // Εφαρμογή λύσεων στο CDT
+            //apply the resolved solutions to the current best triangulation
             CDT merged_cdt;
             copyTriangulation(best_cdt, merged_cdt);
             for (const auto& solution : resolved_solutions) {
                 applyAntSolution(solution, merged_cdt);
             }
 
-            // Ενημέρωση του καλύτερου τριγωνισμού
+            //Update the best triangulation
             int current_obtuse_count = countObtuseTriangles(merged_cdt);
             double current_energy=calculateEnergy(merged_cdt,alpha,beta,totalSteinerInserted);
 
@@ -1414,27 +1457,68 @@ namespace Triangulation {
                 copyTriangulation(merged_cdt,best_cdt);
             }
 
-            // Ενημέρωση φερομονών
+            
             UpdatePheromones(pheromone, resolved_solutions, alpha, beta, xi);
         }
 
-        // Επιστροφή του καλύτερου τριγωνισμού
+        //Copy the best triangulation back to original triangulation variable cdt
         copyTriangulation(best_cdt, cdt);
         std::cout << "Total obtuse triangles after ant colony: " << countObtuseTriangles(cdt) << std::endl;
         CGAL::draw(cdt);
+
+        //extracting the steiner edges to write them to the output .json file
+        int index = 0;
+        for (auto vit = cdt.finite_vertices_begin(); vit != cdt.finite_vertices_end(); ++vit) {
+            vit->info() = index++;
+        }
+
+        std::set<int> steiner_indices;
+        for (size_t i = 0; i < steiner_points_x_double.size(); ++i) {
+            double x = steiner_points_x_double[i];
+            double y = steiner_points_y_double[i];
+
+            for (auto vit = cdt.finite_vertices_begin(); vit != cdt.finite_vertices_end(); ++vit) {
+                if (CGAL::squared_distance(vit->point(), Point(x, y)) < 1e-9) {
+                    steiner_indices.insert(vit->info());
+                    break;
+                }
+            }
+        }
+
+        steiner_edges.clear();
+        for (auto eit = cdt.finite_edges_begin(); eit != cdt.finite_edges_end(); ++eit) {
+            auto face = eit->first;
+            int index = eit->second;
+
+            auto vertex1 = face->vertex((index + 1) % 3);
+            auto vertex2 = face->vertex((index + 2) % 3);
+
+            if (vertex1!=nullptr && vertex2!=nullptr) {
+                int index1 = vertex1->info();
+                int index2 = vertex2->info();
+
+                if (steiner_indices.count(index1) > 0 || steiner_indices.count(index2) > 0) {
+                    if (index1 > index2) std::swap(index1, index2);
+                    steiner_edges.push_back({index1, index2});
+                }
+            }
+        }
+
+        writeOutputToFile("../output/output.json", steiner_points_x, steiner_points_y, steiner_edges, countObtuseTriangles(cdt));
     }
 
+    //This function is used to copy a trianglation 
     void CDTProcessor::copyTriangulation(const CDT& source, CDT& destination) {
         destination.clear(); // Clear the current triangulation
 
-        // Step 1: Copy vertices
+        // Copy vertices
         std::map<CDT::Vertex_handle, CDT::Vertex_handle> vertex_map;
         for (auto vertex = source.finite_vertices_begin(); vertex != source.finite_vertices_end(); ++vertex) {
             auto new_vertex = destination.insert(vertex->point());
             vertex_map[vertex] = new_vertex; // Map old vertices to new vertices
         }
 
-        // Step 2: Copy constrained edges only
+        //Copy constrained edges only
         for (auto edge = source.constrained_edges_begin(); edge != source.constrained_edges_end(); ++edge) {
             auto face = edge->first; // The face containing this constrained edge
             int index = edge->second; // Index of the edge in the face
@@ -1448,47 +1532,50 @@ namespace Triangulation {
         }
     }
 
+    //This function is used to select a Steiner point based on the given options and total weight
     Point CDTProcessor::selectSteinerPoint(const std::vector<std::pair<Point, double>>& options, double totalWeight) {
-        // If options are empty, handle the fallback logic
         if (options.empty()) {
             std::cout<< " return point (0,0)" << std::endl;
             //std::cerr << "No Steiner point options available. Returning a default point." << std::endl;
-            return Point(0, 0); // Replace with an appropriate fallback point or behavior
+            return Point(0, 0); 
         }
 
+        // Generate a random value between 0 and totalWeight
         double randomValue = getRandomUniform() * totalWeight;
+        // Loop through the options and select the point based on the random value
         for (const auto& [sp, weight] : options) {
             if ((randomValue -= weight) <= 0) {
                 return sp;
             }
         }
 
-        // If no point is selected due to precision issues, fallback to the first option
+       
         std::cout << "SELECT Steiner point: (" << options.front().first.x() << ", " << options.front().first.y() << ")" << std::endl;
         return options.front().first; 
     }
 
+    //This function is used to calculate a heuristic value based on the strategy and the triangle's geometry
     double CDTProcessor::calculateHeuristic(const Point& p1,const Point& p2,const Point&p3,const std::string& strategy){
         // Calculate circumcenter and circumradius (R)
         Point circumcenter = CGAL::circumcenter(p1, p2, p3);
-        double circumradius = std::sqrt(CGAL::squared_distance(circumcenter, p1));  // Circumradius (R)
+        double circumradius = std::sqrt(CGAL::squared_distance(circumcenter, p1));  
 
         // Find the longest edge and calculate the height from that edge
         double a = std::sqrt(CGAL::squared_distance(p2, p3)); // Edge length between p2 and p3
-        double b = std::sqrt(CGAL::squared_distance(p1, p3)); // Edge length between p1 and p3
-        double c = std::sqrt(CGAL::squared_distance(p1, p2)); // Edge length between p1 and p2
+        double b = std::sqrt(CGAL::squared_distance(p1, p3)); 
+        double c = std::sqrt(CGAL::squared_distance(p1, p2)); 
         double longestEdge = std::max({a, b, c});  // The longest side of the triangle
 
-        // Calculate the area of the triangle using the determinant formula (shoelace formula)
+        // Calculate the area of the triangle
         double area = std::abs(CGAL::area(p1, p2, p3));
 
         // Calculate height from the longest edge
         double height = (2 * area) / longestEdge;
 
-        // Compute the radius-to-height ratio (ρ)
+        // Calculate (ρ)
         double rho = circumradius / height;
 
-        // Depending on the strategy, we calculate different heuristics
+        // Depending on the strateg  we calculate different heuristics
         if (strategy == "perpendicular") {
             // Vertex projection heuristic, most useful when ρ > 2.0
             if (rho > 2.0) {
@@ -1508,18 +1595,15 @@ namespace Triangulation {
         else if (strategy == "midpoint") {
             // Midpoint heuristic, favored when ρ < 1.0
             if (rho < 1.0) {
-                return std::max(0.0, (3 - 2 * rho) / 3);  // Favor midpoint for low ρ values
+                return std::max(0.0, (3 - 2 * rho) / 3);  
             } else {
                 return 0.0;
             }
         } 
         else if (strategy == "mean_adjacent") {
-            // Mean of adjacent obtuse triangles, if there are at least 2 adjacent obtuse triangles
-            // For this case, you would need additional logic to check for adjacent obtuse triangles.
             return 1.0;  // Priority is given to this option in this case
         } 
         else {
-            // Default case: no heuristic for unrecognized strategies
             std::cout << "Unkown method " << std::endl;
             return 0.0;
         }
@@ -1527,7 +1611,7 @@ namespace Triangulation {
 
 
 
-    // Βοηθητική συνάρτηση για τη μετατροπή αριθμών σε κλάσματα
+    //This function is used to convert a double to a fraction string
     std::string CDTProcessor::toFraction(double value) {
         constexpr double epsilon = 1e-6;
         int sign = value < 0 ? -1 : 1;  
@@ -1543,7 +1627,8 @@ namespace Triangulation {
         return (sign < 0 ? "-" : "") + std::to_string(numerator / gcd) + "/" + std::to_string(denominator / gcd);
     }
 
-  void CDTProcessor::writeOutputToFile(
+    //This function is used to write the output to a json file
+    void CDTProcessor::writeOutputToFile(
         const std::string& filepath,
         const std::vector<std::string>& steiner_points_x,
         const std::vector<std::string>& steiner_points_y,
@@ -1555,10 +1640,10 @@ namespace Triangulation {
         // Create JSON object
         json::object output;
 
-        // Add content metadata
+
         output["content_type"] = "CG_SHOP_2025_Solution";
-        output["instance_uid"] = instance_uid_; // Assumes access to `instance_uid_`
-        output["method"] = method_;            // Assumes access to `method_`
+        output["instance_uid"] = instance_uid_;
+        output["method"] = method_;           
 
         // Convert parameters to JSON object
         json::array parameters_json;
@@ -1566,18 +1651,22 @@ namespace Triangulation {
             std::ostringstream param_entry;
             param_entry << param.first << ":" << param.second;
             parameters_json.push_back(boost::json::value(param_entry.str()));
-            // parameters_json[param.first] = json::value_from(param.second);
         }
         output["parameters"] = parameters_json;
 
-        // Directly add Steiner points
+        // Add Steiner points
         json::array steiner_points_x_json(steiner_points_x.begin(), steiner_points_x.end());
         json::array steiner_points_y_json(steiner_points_y.begin(), steiner_points_y.end());
 
+
+        output["steiner_points_x"] = " ";
+        output["steiner_points_y"] = " ";
+            
+   
         output["steiner_points_x"] = steiner_points_x_json;
         output["steiner_points_y"] = steiner_points_y_json;
+        
 
-        // Handle edges
         if (steiner_edges.empty()) {
             std::cout << "EMPTY EDGES\n\n";
         }
@@ -1598,24 +1687,27 @@ namespace Triangulation {
             throw std::runtime_error("Failed to open output file: " + filepath);
         }
 
-        // Write JSON to file with improved formatting
+        // Write JSON to file 
         file << "{\n";
         file << "  \"content_type\": " << json::serialize(output["content_type"]) << "," << std::endl;
         file << "  \"instance_uid\": " << json::serialize(output["instance_uid"]) << "," << std::endl;
-        file << "  \"method\": " << json::serialize(output["method"]) << "," << std::endl;
-
-        // Write parameters
-        file << "  \"parameters\": " << json::serialize(output["parameters"]) << "," << std::endl;
-
+        
         // Write Steiner points
         file << "  \"steiner_points_x\": " << json::serialize(output["steiner_points_x"]) << "," << std::endl;
         file << "  \"steiner_points_y\": " << json::serialize(output["steiner_points_y"]) << "," << std::endl;
-
+        
         // Write edges
         file << "  \"edges\": " << json::serialize(output["edges"]) << "," << std::endl;
 
         // Write obtuse count
-        file << "  \"obtuse_count\": " << output["obtuse_count"] << std::endl;
+        file << "  \"obtuse_count\": " << output["obtuse_count"] << "," << std::endl;
+
+        //Write the method done
+        file << "  \"method\": " << json::serialize(output["method"]) << "," << std::endl;
+
+        // Write parameters
+        file << "  \"parameters\": " << json::serialize(output["parameters"]) << std::endl;
+        
         file << "}" << std::endl;
 
         file.close();

@@ -10,7 +10,7 @@
  "additional_constraints": [
  [3,4], [5,6], [9,10], [10,11], [11,12], [12,13], [13,14], [14,15],
 [15,16], [18,19], [19,0]],
- "method": "sa",
- "parameters": {"alpha": 2.0, "beta": 5.0, "L": 5000},
- "delaunay": true
+ "method": "local",
+ "parameters": { "L": 1000 },
+ "delaunay": false
 } 
