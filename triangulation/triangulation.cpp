@@ -1461,9 +1461,12 @@ namespace Triangulation {
         output["method"] = method_;            // Assumes access to `method_`
 
         // Convert parameters to JSON object
-        json::object parameters_json;
+        json::array parameters_json;
         for (const auto& param : parameters_) {
-            parameters_json[param.first] = json::value_from(param.second);
+            std::ostringstream param_entry;
+            param_entry << param.first << ":" << param.second;
+            parameters_json.push_back(boost::json::value(param_entry.str()));
+            // parameters_json[param.first] = json::value_from(param.second);
         }
         output["parameters"] = parameters_json;
 
