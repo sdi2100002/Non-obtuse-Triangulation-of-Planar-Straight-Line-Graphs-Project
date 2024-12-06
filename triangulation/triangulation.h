@@ -142,6 +142,8 @@ namespace Triangulation {
         void writeOutputToFile(const std::string& filepath,const std::vector<std::string>& steiner_points_x,const std::vector<std::string>& steiner_points_y,const std::vector<std::pair<int, int>>& edges,int obtuse_count);
     
         int getPointIndex(const Point& point, const std::vector<std::pair<double, double>>& points);
+    
+        double fromFraction(const std::string& fraction);
     };
 }
 

@@ -8,6 +8,8 @@
 #include <numeric> 
 #include <set>
 #include <random>
+#include <gmp.h> 
+#include <CGAL/Exact_rational.h>
 #include "../CGAL-5.6.1/include/CGAL/convex_hull_2.h"
 
 namespace Triangulation {
@@ -726,6 +728,9 @@ namespace Triangulation {
         std::vector<std::string> steiner_points_y;
         std::vector<std::pair<int, int>> steiner_edges;
 
+        std::vector<double> steiner_points_x_double;  // New variable to store x as double
+        std::vector<double> steiner_points_y_double;  // New variable to store y as double
+
         while (hasObtuse && counter < newL) {
             hasObtuse = false;  
             int current_obtuse_count = countObtuseTriangles(cdt);
@@ -824,6 +829,9 @@ namespace Triangulation {
                         std::string y_frac = toFraction(steiner_point.y());
                         steiner_points_x.push_back(x_frac);
                         steiner_points_y.push_back(y_frac);
+
+                        steiner_points_x_double.push_back(steiner_point.x());  // Store x as double
+                        steiner_points_y_double.push_back(steiner_point.y());  // Store y as double
                     }
                 }
 
@@ -836,6 +844,66 @@ namespace Triangulation {
         }
         std::cout<<"Final obtuse triangles count : " << countObtuseTriangles(cdt) << std::endl;
         CGAL::draw(cdt);
+
+        int index = 0;
+        for (auto vit = cdt.finite_vertices_begin(); vit != cdt.finite_vertices_end(); ++vit) {
+            vit->info() = index++;
+        }
+
+        std::cout << "Total vertices in CDT after insertion: " << index << std::endl;
+
+        // Find edges involving Steiner points
+        std::set<int> steiner_indices;
+        for (size_t i = 0; i < steiner_points_x_double.size(); ++i) {
+            double x = steiner_points_x_double[i];
+            double y = steiner_points_y_double[i];
+
+            bool found = false;
+            for (auto vit = cdt.finite_vertices_begin(); vit != cdt.finite_vertices_end(); ++vit) {
+                // Use squared distance for comparison
+                if (CGAL::squared_distance(vit->point(), Point(x, y)) < 1e-9) {
+                    steiner_indices.insert(vit->info());
+                    std::cout << "Matched Steiner point (" << x << ", " << y 
+                            << ") to vertex index: " << vit->info() << std::endl;
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                std::cerr << "Failed to match Steiner point (" << x << ", " << y << ")" << std::endl;
+            }
+        }
+
+        steiner_edges.clear();
+
+        // Collect edges involving Steiner points
+        for (auto eit = cdt.finite_edges_begin(); eit != cdt.finite_edges_end(); ++eit) {
+            auto face = eit->first;
+            int index = eit->second;
+
+            auto vertex1 = face->vertex((index + 1) % 3);
+            auto vertex2 = face->vertex((index + 2) % 3);
+
+            if (vertex1 != nullptr && vertex2 != nullptr) {
+                int index1 = vertex1->info();
+                int index2 = vertex2->info();
+
+                // Check if either vertex is a Steiner point
+                if (steiner_indices.count(index1) > 0 || steiner_indices.count(index2) > 0) {
+                    if (index1 > index2) std::swap(index1, index2);
+                    steiner_edges.push_back({index1, index2});
+                    std::cout << "Edge added: (" << index1 << ", " << index2 << ")" << std::endl;
+                }
+            }
+        }
+
+        std::cout << "Total Steiner edges: " << steiner_edges.size() << std::endl;
+
+        if (steiner_indices.size() > steiner_edges.size()) {
+            std::cerr << "Warning: Some Steiner points are not associated with any edge!" << std::endl;
+        }
+
+
         
         writeOutputToFile("../output/output.json", steiner_points_x, steiner_points_y, steiner_edges, countObtuseTriangles(cdt));
     }

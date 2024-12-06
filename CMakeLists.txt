@@ -34,9 +34,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
 # Source files
 set(SOURCES
-    opt_triangulation.cpp
     ./triangulation/triangulation.cpp
     ./utils/utils.cpp
+    opt_triangulation.cpp
+    
+    
     # ./utilsAlgo/utilsAlgo.cpp
 )
 
