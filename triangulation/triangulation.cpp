@@ -659,7 +659,7 @@ namespace Triangulation {
     //This function is used to select and call the method requested 
     void CDTProcessor::selectMethod(CDT &cdt, const std::string& method,const std::map<std::string, double>& parameters){
         int category=detectCategory(cdt);
-        
+    
 
         if (method == "local") { //Local search moethod
             std::cout << "Selected method: Local Search\n";
@@ -728,6 +728,8 @@ namespace Triangulation {
 
         int obtuseCount = countObtuseTriangles(cdt);
         int newL = static_cast<int>(L);
+
+        std::cout<<"STARTING LOCAL SEARCH WITH: " << obtuseCount << " OBTUSE TRIANGLES" << std::endl;
 
         //Used two variables to store the steiners one with frac and the other with double
         std::vector<std::string> steiner_points_x;
@@ -921,7 +923,7 @@ namespace Triangulation {
         }
 
 
-        writeOutputToFile("../output/output.json", steiner_points_x, steiner_points_y, steiner_edges, countObtuseTriangles(cdt));
+        //writeOutputToFile("../output/output.json", steiner_points_x, steiner_points_y, steiner_edges, countObtuseTriangles(cdt));
     }
 
     //This function finds the index of a given CGAL point in a vector

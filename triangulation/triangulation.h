@@ -48,7 +48,6 @@ namespace Triangulation {
         std::string method_;
         std::map<std::string,double> parameters_;
         bool delaunay_;
-        //std::map<CDT::Face_handle, std::map<Point, double>> pheromone;
 
         // This function checks if the point pt is on the line segment formed by points p1 and p2
         bool isPointOnSegment(const std::pair<double, double>& pt, const std::pair<double, double>& p1, const std::pair<double, double>& p2);

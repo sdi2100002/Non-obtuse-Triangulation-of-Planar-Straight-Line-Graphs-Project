@@ -1,10 +1,10 @@
 {
   "content_type": "CG_SHOP_2025_Solution",
-  "instance_uid": "test_4",
-  "steiner_points_x": ["288/1"],
-  "steiner_points_y": ["512/1"],
-  "edges": [[2,5],[1,5],[0,5],[3,5]],
-  "obtuse_count": 0,
+  "instance_uid": "test_5",
+  "steiner_points_x": ["307/1"],
+  "steiner_points_y": ["521/1"],
+  "edges": [[2,6],[1,6],[0,6],[5,6],[3,6]],
+  "obtuse_count": 2,
   "method": "local",
   "parameters": ["L:1000"]
 }
