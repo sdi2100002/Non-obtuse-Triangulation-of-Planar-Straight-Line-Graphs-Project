@@ -660,21 +660,6 @@ namespace Triangulation {
     void CDTProcessor::selectMethod(CDT &cdt, const std::string& method,const std::map<std::string, double>& parameters){
         int category=detectCategory(cdt);
         
-        // auto boundary = extractBoundarySegments(cdt);
-        // std::cout << "Boundary size: " << boundary.size() << std::endl;
-
-        // if (isConvexBoundary(boundary)) {
-        //     std::cout << "Boundary is convex." << std::endl;
-        //     if (!hasConstraints(cdt)) std::cout << "No constraints." << std::endl;
-        //     if (hasOpenBoundary(boundary)) std::cout << "Boundary is open." << std::endl;
-        // } else {
-        //     std::cout << "Boundary is not convex." << std::endl;
-        //     if (hasAxisAlignedSegments(boundary)) std::cout << "Boundary has axis-aligned segments." << std::endl;
-        // }
-
-        // std::cout << "Returning category: " << (isConvexBoundary(boundary) ? (hasOpenBoundary(boundary) ? 2 : 3) : (hasAxisAlignedSegments(boundary) ? 4 : 5)) << std::endl;
-
-
 
         if (method == "local") { //Local search moethod
             std::cout << "Selected method: Local Search\n";
