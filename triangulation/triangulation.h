@@ -170,7 +170,7 @@ namespace Triangulation {
         bool hasOpenConstraints();
         bool isConvexBoundary();
 
-        void detectCategory(CDT &cdt);
+        int detectCategory(CDT &cdt);
     
 
     };

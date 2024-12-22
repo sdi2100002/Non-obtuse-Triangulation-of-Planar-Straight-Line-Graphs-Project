@@ -658,8 +658,8 @@ namespace Triangulation {
 
     //This function is used to select and call the method requested 
     void CDTProcessor::selectMethod(CDT &cdt, const std::string& method,const std::map<std::string, double>& parameters){
-        detectCategory(cdt);
-
+        int category=detectCategory(cdt);
+        
         // auto boundary = extractBoundarySegments(cdt);
         // std::cout << "Boundary size: " << boundary.size() << std::endl;
 
@@ -1805,7 +1805,7 @@ namespace Triangulation {
 
 
 
-    void CDTProcessor::detectCategory(CDT &cdt) {
+    int CDTProcessor::detectCategory(CDT &cdt) {
         std::cout << "Points:\n";
         for (const auto& point : points_) {
             std::cout << "(" << point.first << ", " << point.second << ")\n";
@@ -1820,16 +1820,22 @@ namespace Triangulation {
 
         if (isConvexBoundary()) {
             std::cout << "Category A: Convex boundary without constraints." << std::endl;
+            return 1;
         } else if (isConvexBoundary() && hasOpenConstraints()) {
             std::cout << "Category B: Convex boundary with open constraints." << std::endl;
+            return 2;
         } else if (isConvexBoundary() && hasClosedPolygonConstraints()) {
             std::cout << "Category C: Convex boundary with closed polygon constraints." << std::endl;
+            return 3;
         } else if (isAxisAlignedNonConvex()) {
             std::cout << "Category D: Non-convex boundary with axis-aligned edges without constraints." << std::endl;
+            return 4;
         } else if (isIrregularNonConvex()) {
             std::cout << "Category E: Irregular non-convex boundary." << std::endl;
+            return 5;
         } else {
             std::cout << "Unrecognized category." << std::endl;
+            return -1;
         }
     }
 
