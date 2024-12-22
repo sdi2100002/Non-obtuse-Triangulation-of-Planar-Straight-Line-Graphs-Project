@@ -658,6 +658,24 @@ namespace Triangulation {
 
     //This function is used to select and call the method requested 
     void CDTProcessor::selectMethod(CDT &cdt, const std::string& method,const std::map<std::string, double>& parameters){
+        detectCategory(cdt);
+
+        // auto boundary = extractBoundarySegments(cdt);
+        // std::cout << "Boundary size: " << boundary.size() << std::endl;
+
+        // if (isConvexBoundary(boundary)) {
+        //     std::cout << "Boundary is convex." << std::endl;
+        //     if (!hasConstraints(cdt)) std::cout << "No constraints." << std::endl;
+        //     if (hasOpenBoundary(boundary)) std::cout << "Boundary is open." << std::endl;
+        // } else {
+        //     std::cout << "Boundary is not convex." << std::endl;
+        //     if (hasAxisAlignedSegments(boundary)) std::cout << "Boundary has axis-aligned segments." << std::endl;
+        // }
+
+        // std::cout << "Returning category: " << (isConvexBoundary(boundary) ? (hasOpenBoundary(boundary) ? 2 : 3) : (hasAxisAlignedSegments(boundary) ? 4 : 5)) << std::endl;
+
+
+
         if (method == "local") { //Local search moethod
             std::cout << "Selected method: Local Search\n";
             std::cout << "Parameters:\n";
@@ -1716,4 +1734,105 @@ namespace Triangulation {
     }
 
 
+    bool CDTProcessor::isConvexBoundary() {
+        int n = points_.size();
+        if (n < 3) return false;
+        double epsilon = 1e-6;
+        bool isClockwise = false;
+        for (int i = 0; i < n; ++i) {
+            int j = (i + 1) % n;
+            int k = (i + 2) % n;
+            double crossProduct = (points_[j].first - points_[i].first) * (points_[k].second - points_[i].second) -
+                                (points_[j].second - points_[i].second) * (points_[k].first - points_[i].first);
+            if (i == 0) {
+                isClockwise = (crossProduct < -epsilon);
+            } else if (std::abs(crossProduct) > epsilon && ((crossProduct < 0) != isClockwise)) {
+                std::cout << "Convex Check: Inconsistency found at index " << i << ".\n";
+                return false;
+            }
+        }
+        return true;
+    }
+
+    bool CDTProcessor::hasOpenConstraints() {
+        for (const auto &constraint : constraints_) {
+            if (constraint.first < 0 || constraint.second < 0 || constraint.first >= points_.size() || constraint.second >= points_.size()) {
+                std::cout << "Open Constraints Check: Invalid constraint (" << constraint.first << ", " << constraint.second << ").\n";
+                return false;
+            }
+        }
+        std::cout << "Open Constraints Check: All constraints are valid.\n";
+        return true;
+    }
+
+    bool CDTProcessor::hasClosedPolygonConstraints() {
+        std::vector<bool> visited(points_.size(), false);
+        for (const auto &constraint : constraints_) {
+            visited[constraint.first] = true;
+            visited[constraint.second] = true;
+        }
+        for (bool v : visited) {
+            if (!v) {
+                std::cout << "Closed Polygon Constraints Check: Not all points are visited.\n";
+                return false;
+            }
+        }
+        std::cout << "Closed Polygon Constraints Check: All points are part of a closed polygon.\n";
+        return true;
+    }
+
+    bool CDTProcessor::isAxisAlignedNonConvex() {
+        for (size_t i = 0; i < region_boundary_.size(); ++i) {
+            size_t j = (i + 1) % region_boundary_.size();
+            if (points_[region_boundary_[i]].first != points_[region_boundary_[j]].first &&
+                points_[region_boundary_[i]].second != points_[region_boundary_[j]].second) {
+                std::cout << "Axis-Aligned Check: Boundary is not axis-aligned.\n";
+                return false;
+            }
+        }
+        std::cout << "Axis-Aligned Check: Boundary is axis-aligned.\n";
+        return true;
+    }
+
+    bool CDTProcessor::isIrregularNonConvex() {
+        if (!isConvexBoundary() && !isAxisAlignedNonConvex()) {
+            std::cout << "Irregular Non-Convex Check: Boundary is irregular non-convex.\n";
+            return true;
+        }
+        std::cout << "Irregular Non-Convex Check: Boundary does not match irregular non-convex criteria.\n";
+        return false;
+    }
+
+
+
+    void CDTProcessor::detectCategory(CDT &cdt) {
+        std::cout << "Points:\n";
+        for (const auto& point : points_) {
+            std::cout << "(" << point.first << ", " << point.second << ")\n";
+        }
+
+        std::cout << "Region Boundary:\n";
+        for (const auto& index : region_boundary_) {
+            std::cout << index << " ";
+        }
+        std::cout << std::endl;
+
+
+        if (isConvexBoundary()) {
+            std::cout << "Category A: Convex boundary without constraints." << std::endl;
+        } else if (isConvexBoundary() && hasOpenConstraints()) {
+            std::cout << "Category B: Convex boundary with open constraints." << std::endl;
+        } else if (isConvexBoundary() && hasClosedPolygonConstraints()) {
+            std::cout << "Category C: Convex boundary with closed polygon constraints." << std::endl;
+        } else if (isAxisAlignedNonConvex()) {
+            std::cout << "Category D: Non-convex boundary with axis-aligned edges without constraints." << std::endl;
+        } else if (isIrregularNonConvex()) {
+            std::cout << "Category E: Irregular non-convex boundary." << std::endl;
+        } else {
+            std::cout << "Unrecognized category." << std::endl;
+        }
+    }
+
+
+    
 }

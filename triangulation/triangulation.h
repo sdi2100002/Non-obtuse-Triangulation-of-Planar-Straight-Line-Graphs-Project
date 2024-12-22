@@ -17,6 +17,7 @@ typedef CGAL::Triangulation_data_structure_2<Vb, Fb> Tds;
 typedef CGAL::Constrained_Delaunay_triangulation_2<K, Tds> CDT;
 typedef CDT::Point Point;
 
+
 struct AntSolution {
     CDT::Face_handle face;      // Το τρίγωνο στο οποίο έγινε η βελτίωση
     Point steiner_point;        // Το επιλεγμένο Steiner σημείο
@@ -162,7 +163,16 @@ namespace Triangulation {
 
         //This function gets the index of a specific point in a list of points
         int getPointIndex(const Point& point, const std::vector<std::pair<double, double>>& points);
+        
+        bool isIrregularNonConvex();
+        bool isAxisAlignedNonConvex();
+        bool hasClosedPolygonConstraints();
+        bool hasOpenConstraints();
+        bool isConvexBoundary();
+
+        void detectCategory(CDT &cdt);
     
+
     };
 }
 
