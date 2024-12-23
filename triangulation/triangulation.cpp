@@ -1761,7 +1761,6 @@ namespace Triangulation {
         return true;
     }
 
-
     bool CDTProcessor::hasClosedPolygonConstraints() {
         // Create an adjacency graph
         std::unordered_map<int, std::vector<int>> graph;
@@ -1770,54 +1769,83 @@ namespace Triangulation {
             graph[constraint.second].push_back(constraint.first);
         }
 
-        // Check if all vertices in the region boundary are connected
-        // for (int index : region_boundary_) {
-        //     if (graph.find(index) == graph.end()) {
-        //         return false; // A boundary vertex is not part of the constraints
-        //     }
-        // }
-
-        // Use DFS or BFS to ensure constraints form a single closed polygon
-        std::unordered_set<int> visited;
-        std::function<bool(int, int, int)> dfs = [&](int node, int parent, int start) {
-            if (visited.count(node)) {
-                return node == start; // Return to the start node
+        // Ensure all vertices in the region boundary are part of the graph
+        for (int index : region_boundary_) {
+            if (graph.find(index) == graph.end()) {
+                return false; // A boundary vertex is not part of the constraints
             }
-            visited.insert(node);
-            for (int neighbor : graph[node]) {
-                if (neighbor != parent && dfs(neighbor, node, start)) {
-                    return true;
-                }
-            }
-            return false;
-        };
-
-        // Start DFS from the first boundary point
-        if (!dfs(region_boundary_[0], -1, region_boundary_[0])) {
-            return false; // The constraints do not form a valid cycle
         }
 
-        // Ensure all boundary points are visited
-        return visited.size() == region_boundary_.size();
+        // Use DFS to check if constraints form a single closed polygon
+        std::unordered_set<int> visited;
+        std::vector<int> stack;
+        int start = region_boundary_[0];
+
+        stack.push_back(start); // Start DFS from the first boundary point
+        int prev = -1;
+
+        while (!stack.empty()) {
+            int current = stack.back();
+            stack.pop_back();
+
+            if (visited.count(current)) {
+                if (current == start && visited.size() == region_boundary_.size()) {
+                    // All boundary vertices are visited, and we've returned to the start
+                    return true;
+                }
+                continue;
+            }
+
+            visited.insert(current);
+            for (int neighbor : graph[current]) {
+                if (neighbor != prev) { // Avoid revisiting the immediate parent
+                    stack.push_back(neighbor);
+                }
+            }
+            prev = current;
+        }
+
+        // If we exit the loop without completing a valid cycle, return false
+        return false;
     }
 
 
 
     bool CDTProcessor::hasOpenConstraints() {
         // Δημιουργούμε έναν γράφο γειτνίασης από τους περιορισμούς
-        std::unordered_map<int, int> degree;
+        std::unordered_map<int, std::vector<int>> graph;
         for (const auto& constraint : constraints_) {
-            degree[constraint.first]++;
-            degree[constraint.second]++;
+            graph[constraint.first].push_back(constraint.second);
+            graph[constraint.second].push_back(constraint.first);
         }
 
-        // Ελέγχουμε αν υπάρχει κάποια κορυφή με βαθμό διαφορετικό από 2
-        for (const auto& entry : degree) {
-            if (entry.second != 2) {
+        // Ελέγχουμε αν όλοι οι βαθμοί είναι ακριβώς 2
+        for (const auto& entry : graph) {
+            if (entry.second.size() != 2) {
                 return true; // Υπάρχουν ανοιχτοί περιορισμοί
             }
         }
-        return false; // Όλοι οι περιορισμοί σχηματίζουν κλειστό πολύγωνο
+
+        // Χρησιμοποιούμε DFS ή BFS για να βεβαιωθούμε ότι υπάρχει ένα μόνο κλειστό μονοπάτι
+        std::unordered_set<int> visited;
+        std::function<bool(int, int)> dfs = [&](int node, int parent) {
+            if (visited.count(node)) return false; // Ήδη επισκεπτόμενος κόμβος
+            visited.insert(node);
+            for (int neighbor : graph[node]) {
+                if (neighbor != parent && !dfs(neighbor, node)) {
+                    return false;
+                }
+            }
+            return true;
+        };
+
+        // Ξεκινάμε από έναν κόμβο του γράφου
+        if (!dfs(graph.begin()->first, -1)) {
+            return true; // Το γράφημα δεν είναι κυκλικό
+        }
+
+        // Βεβαιωθείτε ότι όλοι οι κόμβοι έχουν επισκεφθεί
+        return visited.size() != graph.size();
     }
 
     bool CDTProcessor::isAxisAlignedNonConvex() {
@@ -1864,10 +1892,10 @@ namespace Triangulation {
         if (isConvex && num_constraints_==0) {
             std::cout << "Category A: Convex boundary without constraints." << std::endl;
             return 1;
-        } else if (isConvex && hasOpenConstraints()) {
+        } else if (isConvex && hasOpenConstraints() ) {
             std::cout << "Category B: Convex boundary with open constraints." << std::endl;
             return 2;
-        } else if (isConvex && hasClosedPolygonConstraints()) {
+        }else if (isConvex && hasClosedPolygonConstraints() ) {
             std::cout << "Category C: Convex boundary with closed polygon constraints." << std::endl;
             return 3;
         } else if (isAxisAlignedNonConvex()) {
