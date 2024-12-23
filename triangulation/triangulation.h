@@ -30,7 +30,7 @@ namespace Triangulation {
     class CDTProcessor {
     public:
         //Constructor to initialize a CDTProcessor Object given the points, constraints , region boundary and a unique instance ID (the input file name) 
-        CDTProcessor(const std::vector<std::pair<double, double>>& points, const std::vector<std::pair<int, int>>& constraints,const std::vector<int>& region_boundary,const std::string& instance_uid,const std::string& method,const std::map<std::string,double>& parameters,const bool delaunay);
+        CDTProcessor(const std::vector<std::pair<double, double>>& points, const std::vector<std::pair<int, int>>& constraints,const std::vector<int>& region_boundary,const std::string& instance_uid,const std::string& method,const std::map<std::string,double>& parameters,const bool delaunay,int numOfConstraints);
         
         //This is the Main function to process the triangulation 
         void processTriangulation();
@@ -47,6 +47,7 @@ namespace Triangulation {
         std::string instance_uid_; 
         std::string method_;
         std::map<std::string,double> parameters_;
+        int num_constraints_;
         bool delaunay_;
 
         // This function checks if the point pt is on the line segment formed by points p1 and p2

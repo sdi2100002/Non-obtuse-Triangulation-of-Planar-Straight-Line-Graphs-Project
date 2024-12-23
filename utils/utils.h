@@ -35,6 +35,6 @@ void retrieveFields(
 std::vector<std::pair<double, double>> createPointsVector(const std::vector<int>& points_x, const std::vector<int>& points_y);
 
 // This function is used to process triangulation using the specified points and constraints
-void CallprocessTriangulation(const std::vector<std::pair<double, double>>& points, const std::vector<std::pair<int, int>>& additional_constraints, const std::vector<int>& region_boundary, const std::string& instance_uid,const std::string& method,const std::map<std::string,double>& parameters,bool delaunay);
+void CallprocessTriangulation(const std::vector<std::pair<double, double>>& points, const std::vector<std::pair<int, int>>& additional_constraints, const std::vector<int>& region_boundary, const std::string& instance_uid,const std::string& method,const std::map<std::string,double>& parameters,bool delaunay,int num_constraints);
 
 #endif 

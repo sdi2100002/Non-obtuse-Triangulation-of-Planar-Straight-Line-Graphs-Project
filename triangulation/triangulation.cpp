@@ -15,8 +15,8 @@
 namespace Triangulation {
 
     // Constructor 
-    CDTProcessor::CDTProcessor(const std::vector<std::pair<double, double>>& points, const std::vector<std::pair<int, int>>& constraints, const std::vector<int>& region_boundary,const std::string& instance_uid,const std::string& method,const std::map<std::string,double>& parameters,const bool delaunay) 
-        : points_(points), constraints_(constraints), region_boundary_(region_boundary) , instance_uid_(instance_uid) , method_(method) , parameters_(parameters),delaunay_(delaunay) {
+    CDTProcessor::CDTProcessor(const std::vector<std::pair<double, double>>& points, const std::vector<std::pair<int, int>>& constraints, const std::vector<int>& region_boundary,const std::string& instance_uid,const std::string& method,const std::map<std::string,double>& parameters,const bool delaunay,int numOfConstraints) 
+        : points_(points), constraints_(constraints), region_boundary_(region_boundary) , instance_uid_(instance_uid) , method_(method) , parameters_(parameters),delaunay_(delaunay),num_constraints_(numOfConstraints) {
     
         //Adding the boundary constraints (the region boundary is treated as a contraint)
         for (size_t i = 0; i < region_boundary_.size(); ++i) {
@@ -1722,50 +1722,102 @@ namespace Triangulation {
 
 
     bool CDTProcessor::isConvexBoundary() {
-        int n = points_.size();
-        if (n < 3) return false;
-        double epsilon = 1e-6;
-        bool isClockwise = false;
+        int n = region_boundary_.size(); // Χρησιμοποιούμε το μέγεθος του boundary.
+        if (n < 3) return false; // Λιγότερα από 3 σημεία δεν σχηματίζουν πολύγωνο.
+
+        double epsilon = 1e-6; // Ανοχή για αριθμητική σταθερότητα.
+        int sign = 0; // Αποθηκεύει τη διεύθυνση της πρώτης μη μηδενικής στροφής.
+
         for (int i = 0; i < n; ++i) {
-            int j = (i + 1) % n;
-            int k = (i + 2) % n;
-            double crossProduct = (points_[j].first - points_[i].first) * (points_[k].second - points_[i].second) -
-                                (points_[j].second - points_[i].second) * (points_[k].first - points_[i].first);
-            if (i == 0) {
-                isClockwise = (crossProduct < -epsilon);
-            } else if (std::abs(crossProduct) > epsilon && ((crossProduct < 0) != isClockwise)) {
-                std::cout << "Convex Check: Inconsistency found at index " << i << ".\n";
+            int curr = region_boundary_[i];
+            int next = region_boundary_[(i + 1) % n];
+            int next_next = region_boundary_[(i + 2) % n];
+
+            // Συντεταγμένες των σημείων.
+            double x1 = points_[next].first - points_[curr].first;
+            double y1 = points_[next].second - points_[curr].second;
+            double x2 = points_[next_next].first - points_[next].first;
+            double y2 = points_[next_next].second - points_[next].second;
+
+            // Υπολογισμός του cross product.
+            double crossProduct = x1 * y2 - y1 * x2;
+
+            // Αγνόησε μικρές τιμές κοντά στο μηδέν.
+            if (std::abs(crossProduct) <= epsilon) {
+                continue;
+            }
+
+            // Ρύθμισε τη διεύθυνση για την πρώτη έγκυρη στροφή.
+            if (sign == 0) {
+                sign = (crossProduct > 0) ? 1 : -1;
+            } else if ((crossProduct > 0) != (sign > 0)) {
+                // Αν βρεθεί στροφή αντίθετης κατεύθυνσης, το boundary δεν είναι κυρτό.
+                std::cout << "Convex Check: Non-convex turn at index " << i << ".\n";
                 return false;
             }
         }
+
+        // Όλες οι στροφές είναι συνεπείς.
         return true;
     }
 
-    bool CDTProcessor::hasOpenConstraints() {
-        for (const auto &constraint : constraints_) {
-            if (constraint.first < 0 || constraint.second < 0 || constraint.first >= points_.size() || constraint.second >= points_.size()) {
-                std::cout << "Open Constraints Check: Invalid constraint (" << constraint.first << ", " << constraint.second << ").\n";
-                return false;
-            }
-        }
-        std::cout << "Open Constraints Check: All constraints are valid.\n";
-        return true;
-    }
 
     bool CDTProcessor::hasClosedPolygonConstraints() {
-        std::vector<bool> visited(points_.size(), false);
-        for (const auto &constraint : constraints_) {
-            visited[constraint.first] = true;
-            visited[constraint.second] = true;
+        // Create an adjacency graph
+        std::unordered_map<int, std::vector<int>> graph;
+        for (const auto& constraint : constraints_) {
+            graph[constraint.first].push_back(constraint.second);
+            graph[constraint.second].push_back(constraint.first);
         }
-        for (bool v : visited) {
-            if (!v) {
-                std::cout << "Closed Polygon Constraints Check: Not all points are visited.\n";
-                return false;
+
+        // Check if all vertices in the region boundary are connected
+        // for (int index : region_boundary_) {
+        //     if (graph.find(index) == graph.end()) {
+        //         return false; // A boundary vertex is not part of the constraints
+        //     }
+        // }
+
+        // Use DFS or BFS to ensure constraints form a single closed polygon
+        std::unordered_set<int> visited;
+        std::function<bool(int, int, int)> dfs = [&](int node, int parent, int start) {
+            if (visited.count(node)) {
+                return node == start; // Return to the start node
+            }
+            visited.insert(node);
+            for (int neighbor : graph[node]) {
+                if (neighbor != parent && dfs(neighbor, node, start)) {
+                    return true;
+                }
+            }
+            return false;
+        };
+
+        // Start DFS from the first boundary point
+        if (!dfs(region_boundary_[0], -1, region_boundary_[0])) {
+            return false; // The constraints do not form a valid cycle
+        }
+
+        // Ensure all boundary points are visited
+        return visited.size() == region_boundary_.size();
+    }
+
+
+
+    bool CDTProcessor::hasOpenConstraints() {
+        // Δημιουργούμε έναν γράφο γειτνίασης από τους περιορισμούς
+        std::unordered_map<int, int> degree;
+        for (const auto& constraint : constraints_) {
+            degree[constraint.first]++;
+            degree[constraint.second]++;
+        }
+
+        // Ελέγχουμε αν υπάρχει κάποια κορυφή με βαθμό διαφορετικό από 2
+        for (const auto& entry : degree) {
+            if (entry.second != 2) {
+                return true; // Υπάρχουν ανοιχτοί περιορισμοί
             }
         }
-        std::cout << "Closed Polygon Constraints Check: All points are part of a closed polygon.\n";
-        return true;
+        return false; // Όλοι οι περιορισμοί σχηματίζουν κλειστό πολύγωνο
     }
 
     bool CDTProcessor::isAxisAlignedNonConvex() {
@@ -1804,14 +1856,18 @@ namespace Triangulation {
         }
         std::cout << std::endl;
 
+        bool isConvex=isConvexBoundary();
 
-        if (isConvexBoundary()) {
+        std::cout<<"print is convex :  " << isConvex << std::endl;
+
+
+        if (isConvex && num_constraints_==0) {
             std::cout << "Category A: Convex boundary without constraints." << std::endl;
             return 1;
-        } else if (isConvexBoundary() && hasOpenConstraints()) {
+        } else if (isConvex && hasOpenConstraints()) {
             std::cout << "Category B: Convex boundary with open constraints." << std::endl;
             return 2;
-        } else if (isConvexBoundary() && hasClosedPolygonConstraints()) {
+        } else if (isConvex && hasClosedPolygonConstraints()) {
             std::cout << "Category C: Convex boundary with closed polygon constraints." << std::endl;
             return 3;
         } else if (isAxisAlignedNonConvex()) {

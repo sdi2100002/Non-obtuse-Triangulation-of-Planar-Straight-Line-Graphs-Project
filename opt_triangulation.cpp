@@ -84,7 +84,7 @@ int main(int argc, char *argv[]) {
 
     // Create points vector from points_x and points_y if CallprocessTriangulation requires it
     auto points = createPointsVector(points_x, points_y);
-    CallprocessTriangulation(points, additional_constraints, region_boundary, instance_uid, method, parameters, delaunay);
+    CallprocessTriangulation(points, additional_constraints, region_boundary, instance_uid, method, parameters, delaunay,num_constraints);
 
 
     return 0;
