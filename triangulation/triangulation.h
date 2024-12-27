@@ -159,7 +159,7 @@ namespace Triangulation {
         std::string toFraction(double value);
         
         //This function is used to write the final output to JSON file
-        void writeOutputToFile(const std::string& filepath,const std::vector<std::string>& steiner_points_x,const std::vector<std::string>& steiner_points_y,const std::vector<std::pair<int, int>>& edges,int obtuse_count);
+        void writeOutputToFile(const std::string& filepath,const std::vector<std::string>& steiner_points_x,const std::vector<std::string>& steiner_points_y,const std::vector<std::pair<int, int>>& edges,int obtuse_count,bool randomizationUsed);
 
         //This function gets the index of a specific point in a list of points
         int getPointIndex(const Point& point, const std::vector<std::pair<double, double>>& points);
@@ -171,8 +171,8 @@ namespace Triangulation {
         bool isConvexBoundary();
 
         int detectCategory(CDT &cdt);
-    
 
+        double randomDouble(double min, double max);
     };
 }
 
