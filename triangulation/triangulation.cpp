@@ -968,6 +968,7 @@ namespace Triangulation {
     void CDTProcessor::simulatedAnnealing(CDT& cdt, double alpha, double beta, int L) {
         // Step 1: Compute initial energy of the triangulation
         bool globalRand = false;
+        int counterNoImprovements=0;
         int countOfSteinerPoints = 0;
         double currentEnergy = calculateEnergy(cdt, alpha, beta, countOfSteinerPoints);
         std::cout << "Initial energy: " << currentEnergy << "\n";
@@ -1057,14 +1058,18 @@ namespace Triangulation {
                                     steiner_points_y_double.push_back(steinerPoint.y());  // Store y as double
                                     //std::cout << "Accepted new configuration. Energy: " << currentEnergy << ", Steiner points: " << countOfSteinerPoints << "\n";  
                                 }
+                                counterNoImprovements=0;
                                 foundImprovement = true;
                                 break;
+                            }
+                            else{
+                                counterNoImprovements++;
                             }
                         }
                     }
 
                     // Δεύτερη φάση: 50 τυχαίες προσπάθειες
-                    if (!foundImprovement) {
+                    if (counterNoImprovements>=50) {
                         globalRand=true;
                         double min_x = std::numeric_limits<double>::max();
                         double max_x = std::numeric_limits<double>::lowest();
@@ -1541,7 +1546,7 @@ namespace Triangulation {
     //This function implements the ant Colony method
     void CDTProcessor::antColonyOptimization(CDT& cdt, double alpha, double beta, double xi, double psi, int lambda, int num_ants, int num_cycles) {
         std::map<CDT::Face_handle, std::map<Point, double>> pheromone;
-
+        bool globalRand=false;
         //init pheromones
         for (auto face = cdt.finite_faces_begin(); face != cdt.finite_faces_end(); ++face) {
             auto steiner_options = generateSteinerOptions(face);
@@ -1676,6 +1681,52 @@ namespace Triangulation {
             // Resolve conflicts between solutions proposed by different ants
             std::vector<AntSolution> resolved_solutions = resolve_conflicts(all_solutions);
 
+            if (resolved_solutions.empty()) {
+                globalRand=true;
+                
+                // No ant improved the triangulation: Attempt random point insertion
+                int max_attempts = 50;
+                for (int attempt = 0; attempt < max_attempts; ++attempt) {
+                    double min_x = std::numeric_limits<double>::max();
+                    double max_x = std::numeric_limits<double>::lowest();
+                    double min_y = std::numeric_limits<double>::max();
+                    double max_y = std::numeric_limits<double>::lowest();
+
+                    for (int index : region_boundary_) {
+                        const auto& point = points_[index];
+                        min_x = std::min(min_x, point.first);
+                        max_x = std::max(max_x, point.first);
+                        min_y = std::min(min_y, point.second);
+                        max_y = std::max(max_y, point.second);
+                    }
+
+                    double random_x = randomDouble(min_x, max_x);
+                    double random_y = randomDouble(min_y, max_y);
+
+                    Point random_point(random_x, random_y);
+
+                    if (!isPointInsideBoundary(std::make_pair(random_point.x(), random_point.y()), region_boundary_, points_)) {
+                        continue;
+                    }
+
+                    CDT temp_cdt;
+                    copyTriangulation(best_cdt, temp_cdt);
+                    temp_cdt.insert(random_point);
+
+                    int new_obtuse_count = countObtuseTriangles(temp_cdt);
+                    if (new_obtuse_count < best_obtuse_count) {
+                        resolved_solutions.push_back({nullptr, random_point, static_cast<double>(best_obtuse_count - new_obtuse_count)});
+                        best_obtuse_count = new_obtuse_count;
+                        break; // Stop once we find an improving point
+                    }
+                }
+            }
+
+            
+
+
+
+
             //apply the resolved solutions to the current best triangulation
             CDT merged_cdt;
             copyTriangulation(best_cdt, merged_cdt);
@@ -1740,7 +1791,7 @@ namespace Triangulation {
             }
         }
 
-        //writeOutputToFile("../output/output.json", steiner_points_x, steiner_points_y, steiner_edges, countObtuseTriangles(cdt));
+        writeOutputToFile("../output/output.json", steiner_points_x, steiner_points_y, steiner_edges, countObtuseTriangles(cdt),globalRand);
     }
 
     //This function is used to copy a trianglation 
@@ -1997,52 +2048,26 @@ namespace Triangulation {
         return true;
     }
 
+    
     bool CDTProcessor::hasClosedPolygonConstraints() {
-        // Create an adjacency graph
+        // Δημιουργούμε γράφο γειτνίασης από τους περιορισμούς
         std::unordered_map<int, std::vector<int>> graph;
         for (const auto& constraint : constraints_) {
             graph[constraint.first].push_back(constraint.second);
             graph[constraint.second].push_back(constraint.first);
         }
 
-        // Ensure all vertices in the region boundary are part of the graph
-        for (int index : region_boundary_) {
-            if (graph.find(index) == graph.end()) {
-                return false; // A boundary vertex is not part of the constraints
+        // Ελέγχουμε αν ολόκληρο το region_boundary_ σχηματίζει κλειστό κύκλο
+        for (size_t i = 0; i < region_boundary_.size(); ++i) {
+            int curr = region_boundary_[i];
+            int next = region_boundary_[(i + 1) % region_boundary_.size()];
+
+            auto it = std::find(graph[curr].begin(), graph[curr].end(), next);
+            if (it == graph[curr].end()) {
+                return false; // Το τμήμα του boundary δεν υπάρχει στα constraints
             }
         }
-
-        // Use DFS to check if constraints form a single closed polygon
-        std::unordered_set<int> visited;
-        std::vector<int> stack;
-        int start = region_boundary_[0];
-
-        stack.push_back(start); // Start DFS from the first boundary point
-        int prev = -1;
-
-        while (!stack.empty()) {
-            int current = stack.back();
-            stack.pop_back();
-
-            if (visited.count(current)) {
-                if (current == start && visited.size() == region_boundary_.size()) {
-                    // All boundary vertices are visited, and we've returned to the start
-                    return true;
-                }
-                continue;
-            }
-
-            visited.insert(current);
-            for (int neighbor : graph[current]) {
-                if (neighbor != prev) { // Avoid revisiting the immediate parent
-                    stack.push_back(neighbor);
-                }
-            }
-            prev = current;
-        }
-
-        // If we exit the loop without completing a valid cycle, return false
-        return false;
+        return true; // Όλο το boundary είναι μέρος κλειστού κύκλου
     }
 
 
@@ -2055,33 +2080,45 @@ namespace Triangulation {
             graph[constraint.second].push_back(constraint.first);
         }
 
-        // Ελέγχουμε αν όλοι οι βαθμοί είναι ακριβώς 2
-        for (const auto& entry : graph) {
-            if (entry.second.size() != 2) {
-                return true; // Υπάρχουν ανοιχτοί περιορισμοί
-            }
-        }
-
-        // Χρησιμοποιούμε DFS ή BFS για να βεβαιωθούμε ότι υπάρχει ένα μόνο κλειστό μονοπάτι
+        // Ανιχνεύουμε αν υπάρχουν κλειστοί κύκλοι
         std::unordered_set<int> visited;
-        std::function<bool(int, int)> dfs = [&](int node, int parent) {
-            if (visited.count(node)) return false; // Ήδη επισκεπτόμενος κόμβος
+        bool hasClosedCycle = false;
+
+        std::function<void(int, int)> dfs = [&](int node, int parent) {
             visited.insert(node);
             for (int neighbor : graph[node]) {
-                if (neighbor != parent && !dfs(neighbor, node)) {
-                    return false;
+                if (neighbor == parent) continue; // Αγνόηση γονέα
+                if (visited.count(neighbor)) {
+                    // Βρέθηκε κλειστός κύκλος
+                    hasClosedCycle = true;
+                    return;
                 }
+                dfs(neighbor, node);
             }
-            return true;
         };
 
-        // Ξεκινάμε από έναν κόμβο του γράφου
-        if (!dfs(graph.begin()->first, -1)) {
-            return true; // Το γράφημα δεν είναι κυκλικό
+        // Ελέγχουμε κάθε συνδεδεμένο υπογράφο για κλειστούς κύκλους
+        for (const auto& entry : graph) {
+            if (!visited.count(entry.first)) {
+                dfs(entry.first, -1);
+                if (hasClosedCycle) {
+                    std::cout << "OpenConstraints Check: Closed cycle found.\n";
+                    return false; // Υπάρχει κλειστός κύκλος
+                }
+            }
         }
 
-        // Βεβαιωθείτε ότι όλοι οι κόμβοι έχουν επισκεφθεί
-        return visited.size() != graph.size();
+        // Ελέγχουμε αν κάποιοι κόμβοι έχουν βαθμό διαφορετικό από 2
+        for (const auto& entry : graph) {
+            if (entry.second.size() != 2) {
+                std::cout << "OpenConstraints Check: Node with degree != 2 found (node " 
+                        << entry.first << ").\n";
+                return true; // Όλοι οι περιορισμοί είναι ανοιχτοί
+            }
+        }
+
+        std::cout << "OpenConstraints Check: All constraints are open.\n";
+        return true; // Όλοι οι περιορισμοί είναι ανοιχτοί
     }
 
     bool CDTProcessor::isAxisAlignedNonConvex() {
@@ -2128,7 +2165,7 @@ namespace Triangulation {
         if (isConvex && num_constraints_==0) {
             std::cout << "Category A: Convex boundary without constraints." << std::endl;
             return 1;
-        } else if (isConvex && hasOpenConstraints() ) {
+        } else if (isConvex && !hasClosedPolygonConstraints() ) {
             std::cout << "Category B: Convex boundary with open constraints." << std::endl;
             return 2;
         }else if (isConvex && hasClosedPolygonConstraints() ) {
