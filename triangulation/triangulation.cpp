@@ -1658,6 +1658,8 @@ namespace Triangulation {
     void CDTProcessor::antColonyOptimization(CDT& cdt, double alpha, double beta, double xi, double psi, int lambda, int num_ants, int num_cycles) {
         std::map<CDT::Face_handle, std::map<Point, double>> pheromone;
         bool globalRand=false;
+        // int steinerInsertedCounter=0;
+        // std::vector<double> convergenceRates;
         //init pheromones
         for (auto face = cdt.finite_faces_begin(); face != cdt.finite_faces_end(); ++face) {
             auto steiner_options = generateSteinerOptions(face);
@@ -1828,6 +1830,7 @@ namespace Triangulation {
                     if (new_obtuse_count < best_obtuse_count) {
                         resolved_solutions.push_back({nullptr, random_point, static_cast<double>(best_obtuse_count - new_obtuse_count)});
                         best_obtuse_count = new_obtuse_count;
+                        
                         break; // Stop once we find an improving point
                     }
                 }
@@ -1853,11 +1856,29 @@ namespace Triangulation {
                 best_energy=current_obtuse_count == 0 ? 0 : current_energy;
                 best_obtuse_count=current_obtuse_count;
                 copyTriangulation(merged_cdt,best_cdt);
+                // steinerInsertedCounter++;
+
+                // int obtuseAfter=countObtuseTriangles(best_cdt);
+                // if(obtuseAfter < current_obtuse_count){
+                //     double p_n=log(static_cast<double>(obtuseAfter) / current_obtuse_count) /
+                //             log(static_cast<double>(steinerInsertedCounter) / (steinerInsertedCounter + 1));
+                //     convergenceRates.push_back(p_n);
+                // }
+                
+
+
             }
 
             
             UpdatePheromones(pheromone, resolved_solutions, alpha, beta, xi);
         }
+
+        // double averageConvergenceRate=0.0;
+        // if(!convergenceRates.empty()){
+        //     std::cout<<"Calculating averageConvergenceRate" << std::endl;
+        //     averageConvergenceRate = std::accumulate(convergenceRates.begin(), convergenceRates.end(), 0.0) / convergenceRates.size();
+        // }
+        // std::cout << "Average Convergence Rate: " << averageConvergenceRate << std::endl;
 
         //Copy the best triangulation back to original triangulation variable cdt
         copyTriangulation(best_cdt, cdt);
