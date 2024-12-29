@@ -775,107 +775,178 @@ namespace Triangulation {
 
             bool steinerAdded = false; // Track if a Steiner point was added in this iteration
 
-            // Randomize Steiner point if no Steiner point added for 50 iterations
-            if (noSteinerCount >= 50) {
-                globalRand = true;
-                //std::cout << "Randomizing Steiner point due to lack of progress." << std::endl;
+            //For each obtuse triangle
+            for (const auto& fit : obtuse_triangles){
+                auto p1 = fit->vertex(0)->point();
+                auto p2 = fit->vertex(1)->point();
+                auto p3 = fit->vertex(2)->point();
 
-                double min_x = std::numeric_limits<double>::max();
-                double max_x = std::numeric_limits<double>::lowest();
-                double min_y = std::numeric_limits<double>::max();
-                double max_y = std::numeric_limits<double>::lowest();
-
-                for (int index : region_boundary_) {
-                    const auto& point = points_[index]; // Access the point using the index
-                    min_x = std::min(min_x, point.first);
-                    max_x = std::max(max_x, point.first);
-                    min_y = std::min(min_y, point.second);
-                    max_y = std::max(max_y, point.second);
-                }
-
-                CGAL::Point_2<CGAL::Epick> best_random_point;
+                CDT best_cdt = cdt;  
                 int best_obtuse_count = current_obtuse_count;
-                bool found_better = false;
 
-                for (int attempt = 0; attempt < 50; ++attempt) {
-                    double random_x = randomDouble(min_x, max_x);
-                    double random_y = randomDouble(min_y, max_y);
+                //Evaluate all strategies
+                for (int strategy = 0; strategy <= 6; ++strategy) {
+                    Point steiner_point;
 
-                    CGAL::Point_2<CGAL::Epick> random_point(random_x, random_y);
-
-                    if (isPointInsideBoundary(std::make_pair(random_point.x(), random_point.y()), region_boundary_, points_)) {
-                        try {
-                            CDT new_cdt = cdt;
-                            new_cdt.insert(random_point);
-                            processConvexPolygon(new_cdt);  // Ensure local re-triangulation
-
-                            int new_obtuse_count = countObtuseTriangles(new_cdt);
-
-                            if (new_obtuse_count < best_obtuse_count) {
-                                best_random_point = random_point;
-                                best_obtuse_count = new_obtuse_count;
-                                found_better = true;
-                                break; // Immediately use this point
-                            }
-                        } catch (const CGAL::Precondition_exception& e) {
-                            std::cerr << "Failed to insert random Steiner point: " << e.what() << "\n";
+                    //Find the steiner for each method
+                    if (strategy == 0) {
+                        steiner_point = CGAL::circumcenter(p1, p2, p3);
+                    } else if (strategy == 1) {
+                        steiner_point = calculate_incenter(p1, p2, p3);
+                    } else if (strategy == 2) {
+                        steiner_point = getMidpointOfLongestEdge(p1, p2, p3); 
+                    } else if (strategy == 3) {
+                        steiner_point = CGAL::centroid(p1, p2, p3);
+                    } else if (strategy == 4) {
+                        steiner_point = calculate_perpendicular_bisector_point(p1, p2, p3); 
+                    } else if (strategy == 5) {
+                        steiner_point = projectPointOntoTriangle(Point(0, 0), p1, p2, p3);
+                    } else if(strategy == 6 && !delaunay_){
+                        steiner_point=getMeanAdjacentPoint(fit,best_cdt); //TODO SEGMETATION AFTER 1K LOOPS
+                        if (steiner_point.x()==0 && steiner_point.y()==0){
+                            continue;
                         }
                     }
-                }
 
-                if (found_better) {
-                    cdt.insert(best_random_point);
-                    processConvexPolygon(cdt);
-                    std::cout << "Placed random Steiner: " << best_random_point << std::endl;
+                    // Validate the Steiner point
+                    if (!CGAL::is_finite(steiner_point.x()) || !CGAL::is_finite(steiner_point.y())) {
+                        continue;
+                    }
 
-                    steiner_points_x_double.push_back(best_random_point.x());
-                    steiner_points_y_double.push_back(best_random_point.y());
+                    if (!isPointInsideBoundary(
+                            std::make_pair(steiner_point.x(), steiner_point.y()),
+                            region_boundary_, points_)) {
+                        continue;
+                    }
 
-                    std::string x_frac = toFraction(best_random_point.x());
-                    std::string y_frac = toFraction(best_random_point.y());
+                    
+                    CDT new_cdt = cdt; 
+                    CDT::Vertex_handle new_vertex;
+                    try {
+                        new_vertex = new_cdt.insert(steiner_point);
+                        processConvexPolygon(new_cdt);  // Ensure local re-triangulation
+                    } catch (const CGAL::Precondition_exception& e) {
+                        std::cerr << "Failed to insert Steiner point: " << e.what() << "\n";
+                        continue;
+                    }
 
-                    steiner_points_x.push_back(x_frac);
-                    steiner_points_y.push_back(y_frac);
+                    // Count obtuse triangles in the new triangulation
+                    int new_obtuse_count = countObtuseTriangles(new_cdt);
 
-                    steinerAdded = true; // A random Steiner point was added
-                    noSteinerCount = 0; // Reset counter
-                    steinerCount++;
-                } else {
-                    //std::cerr << "Warning: No improving random Steiner point found after 20 attempts." << std::endl;
-                    if (best_obtuse_count < current_obtuse_count) {
-                        cdt.insert(best_random_point);
-                        processConvexPolygon(cdt);
-                        std::cout << "Inserted best available random Steiner: " << best_random_point << std::endl;
+                    // Keep the best triangulation
+                    if (new_obtuse_count < best_obtuse_count) {
+                        std::cout<<"Placed a steiner : " << steiner_point << std::endl ;
+                        best_cdt = new_cdt;
+                        best_obtuse_count = new_obtuse_count;
+                        // Store Steiner point
+                        std::string x_frac = toFraction(steiner_point.x());
+                        std::string y_frac = toFraction(steiner_point.y());
 
-                        steiner_points_x_double.push_back(best_random_point.x());
-                        steiner_points_y_double.push_back(best_random_point.y());
+                        bool exists = false;
+                        for (size_t i = 0; i < steiner_points_x.size(); ++i) {
+                            if (steiner_points_x[i] == x_frac && steiner_points_y[i] == y_frac) {
+                                exists = true;
+                                break;
+                            }
+                        }
+                            
+                        if(!exists){
+                            steiner_points_x.push_back(x_frac);
+                            steiner_points_y.push_back(y_frac);
 
-                        std::string x_frac = toFraction(best_random_point.x());
-                        std::string y_frac = toFraction(best_random_point.y());
+                            steiner_points_x_double.push_back(steiner_point.x());  // Store x as double
+                            steiner_points_y_double.push_back(steiner_point.y());  // Store y as double
+                        }
+                        break;
+                    }else{
+                        noSteinerCount++;
+                        if (noSteinerCount>=50){
+                            globalRand = true;
+                            //std::cout << "Randomizing Steiner point due to lack of progress." << std::endl;
 
-                        steiner_points_x.push_back(x_frac);
-                        steiner_points_y.push_back(y_frac);
+                            double min_x = std::numeric_limits<double>::max();
+                            double max_x = std::numeric_limits<double>::lowest();
+                            double min_y = std::numeric_limits<double>::max();
+                            double max_y = std::numeric_limits<double>::lowest();
 
-                        steinerAdded = true; // A Steiner point was added
-                        noSteinerCount = 0; // Reset counter
+                            for (int index : region_boundary_) {
+                                const auto& point = points_[index]; // Access the point using the index
+                                min_x = std::min(min_x, point.first);
+                                max_x = std::max(max_x, point.first);
+                                min_y = std::min(min_y, point.second);
+                                max_y = std::max(max_y, point.second);
+                            }
+
+                            CGAL::Point_2<CGAL::Epick> best_random_point;
+                            int best_obtuse_count = current_obtuse_count;
+                            bool found_better = false;
+
+                            for (int attempt = 0; attempt < 50; ++attempt) {
+                                double random_x = randomDouble(min_x, max_x);
+                                double random_y = randomDouble(min_y, max_y);
+
+                                CGAL::Point_2<CGAL::Epick> random_point(random_x, random_y);
+
+                                if (isPointInsideBoundary(std::make_pair(random_point.x(), random_point.y()), region_boundary_, points_)) {
+                                    try {
+                                        CDT new_cdt = cdt;
+                                        new_cdt.insert(random_point);
+                                        processConvexPolygon(new_cdt);  // Ensure local re-triangulation
+
+                                        int new_obtuse_count = countObtuseTriangles(new_cdt);
+
+                                        if (new_obtuse_count < best_obtuse_count) {
+                                            best_random_point = random_point;
+                                            best_obtuse_count = new_obtuse_count;
+                                            found_better = true;
+                                            break; // Immediately use this point
+                                        }
+                                    } catch (const CGAL::Precondition_exception& e) {
+                                        std::cerr << "Failed to insert random Steiner point: " << e.what() << "\n";
+                                    }
+                                }
+                            }
+
+                            if (found_better) {
+                                cdt.insert(best_random_point);
+                                processConvexPolygon(cdt);
+                                std::cout << "Placed random Steiner: " << best_random_point << std::endl;
+
+                                steiner_points_x_double.push_back(best_random_point.x());
+                                steiner_points_y_double.push_back(best_random_point.y());
+
+                                std::string x_frac = toFraction(best_random_point.x());
+                                std::string y_frac = toFraction(best_random_point.y());
+
+                                steiner_points_x.push_back(x_frac);
+                                steiner_points_y.push_back(y_frac);
+
+                                steinerAdded = true; // A random Steiner point was added
+                                noSteinerCount = 0; // Reset counter
+                                steinerCount++;
+                            }   
+                        }
+                        if (steinerAdded) {
+                            noSteinerCount = 0; // Reset counter if a Steiner point was added
+                            
+                            int obtuseAfter=countObtuseTriangles(cdt);
+                            if(obtuseAfter < current_obtuse_count){
+                                double p_n=log(static_cast<double>(obtuseAfter) / current_obtuse_count) /
+                                        log(static_cast<double>(steinerCount) / (steinerCount + 1));
+                                        convergenceRates.push_back(p_n);
+                            }
+                        } else {
+                            ++noSteinerCount; // Increment counter if no Steiner point was added
+                        }
+
                     }
                 }
-            }
 
-            if (steinerAdded) {
-                noSteinerCount = 0; // Reset counter if a Steiner point was added
-                
-                int obtuseAfter=countObtuseTriangles(cdt);
-                if(obtuseAfter < current_obtuse_count){
-                    double p_n=log(static_cast<double>(obtuseAfter) / current_obtuse_count) /
-                            log(static_cast<double>(steinerCount) / (steinerCount + 1));
-                            convergenceRates.push_back(p_n);
-                }
-            } else {
-                ++noSteinerCount; // Increment counter if no Steiner point was added
+                // Update the CDT to the best found triangulation
+                cdt = best_cdt;
+                current_obtuse_count = best_obtuse_count;
             }
             
-
             counter++;
         }
 
@@ -989,6 +1060,7 @@ namespace Triangulation {
         int counterNoImprovements=0;
         int countOfSteinerPoints = 0;
         double currentEnergy = calculateEnergy(cdt, alpha, beta, countOfSteinerPoints);
+        bool steinerInserted;
         std::cout << "Initial energy: " << currentEnergy << "\n";
 
         // Step 2: Initialize temperature
@@ -1002,8 +1074,12 @@ namespace Triangulation {
         std::vector<double> steiner_points_x_double;
         std::vector<double> steiner_points_y_double;
 
+        std::vector<double> convergenceRates;
+
         // Step 3: Main SA loop
         while (temperature >= 0) {
+            int current_obtuse_count=countObtuseTriangles(cdt);
+            steinerInserted=false;
             std::vector<CDT::Face_handle> faces;
             for (auto fit = cdt.finite_faces_begin(); fit != cdt.finite_faces_end(); ++fit) {
                 faces.push_back(fit);
@@ -1054,6 +1130,7 @@ namespace Triangulation {
 
                             // Metropolis Criterion
                             if (deltaEnergy < 0 || std::exp(-deltaEnergy / temperature) >= getRandomUniform()) {
+                                steinerInserted=true;
                                 cdt = newCdt;
                                 countOfSteinerPoints = newCountOfSteinerPoints;
                                 currentEnergy = newEnergy;
@@ -1112,9 +1189,10 @@ namespace Triangulation {
                             CGAL::Point_2<CGAL::Epick> random_point(random_x,random_y);
 
                             if (!isPointInsideBoundary(std::make_pair(random_x, random_y), region_boundary_, points_)) {
-                                std::cout<<"Point is not inside the boundary" << std::endl;
+                                //std::cout<<"Point is not inside the boundary" << std::endl;
                                 continue;
                             }
+                            
 
                             CDT newCdt = cdt;
                             insertSteinerPoint(newCdt, {random_x, random_y});
@@ -1123,6 +1201,7 @@ namespace Triangulation {
                             int newObtuseTriangles = countObtuseTriangles(newCdt);
 
                             if (newObtuseTriangles < countObtuseTriangles(cdt)) {
+                                steinerInserted=true;
                                 cdt = newCdt;
                                 countOfSteinerPoints = newCountOfSteinerPoints;
                                 currentEnergy = calculateEnergy(cdt, alpha, beta, countOfSteinerPoints);
@@ -1140,8 +1219,22 @@ namespace Triangulation {
                     }
                 }
             }
+            if(steinerInserted){
+                int obtuseAfter=countObtuseTriangles(cdt);
+                if(obtuseAfter < current_obtuse_count){
+                    double p_n=log(static_cast<double>(obtuseAfter) / current_obtuse_count) /
+                            log(static_cast<double>(countOfSteinerPoints) / (countOfSteinerPoints + 1));
+                            convergenceRates.push_back(p_n);
+                }
+            }
             temperature -= 1.0 / L;
         }
+
+        double averageConvergenceRate=0.0;
+        if(!convergenceRates.empty()){
+            averageConvergenceRate = std::accumulate(convergenceRates.begin(), convergenceRates.end(), 0.0) / convergenceRates.size();
+        }
+        std::cout << "Average Convergence Rate: " << averageConvergenceRate << std::endl;
 
         std::cout << "Final energy: " << currentEnergy << "\n";
         std::cout << "Total Steiner points added: " << countOfSteinerPoints << std::endl;
