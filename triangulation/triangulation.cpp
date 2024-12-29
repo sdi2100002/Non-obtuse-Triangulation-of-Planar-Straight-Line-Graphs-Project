@@ -724,6 +724,7 @@ namespace Triangulation {
     //This function is used to perform the local search method (similar to our own processTriangulation() method)
     void CDTProcessor::localSearch(CDT& cdt, double L) {
         int counter = 0;
+        int steinerCount=0;
         int noSteinerCount = 0; // Counter for consecutive iterations without adding a Steiner point
         bool hasObtuse = true;
         bool globalRand = false;
@@ -740,6 +741,8 @@ namespace Triangulation {
 
         std::vector<double> steiner_points_x_double;
         std::vector<double> steiner_points_y_double;
+
+        std::vector<double> convergenceRates;
 
         while (hasObtuse && counter < newL) {
             hasObtuse = false;
@@ -836,6 +839,7 @@ namespace Triangulation {
 
                     steinerAdded = true; // A random Steiner point was added
                     noSteinerCount = 0; // Reset counter
+                    steinerCount++;
                 } else {
                     //std::cerr << "Warning: No improving random Steiner point found after 20 attempts." << std::endl;
                     if (best_obtuse_count < current_obtuse_count) {
@@ -860,12 +864,26 @@ namespace Triangulation {
 
             if (steinerAdded) {
                 noSteinerCount = 0; // Reset counter if a Steiner point was added
+                
+                int obtuseAfter=countObtuseTriangles(cdt);
+                if(obtuseAfter < current_obtuse_count){
+                    double p_n=log(static_cast<double>(obtuseAfter) / current_obtuse_count) /
+                            log(static_cast<double>(steinerCount) / (steinerCount + 1));
+                            convergenceRates.push_back(p_n);
+                }
             } else {
                 ++noSteinerCount; // Increment counter if no Steiner point was added
             }
+            
 
             counter++;
         }
+
+        double averageConvergenceRate=0.0;
+        if(!convergenceRates.empty()){
+            averageConvergenceRate = std::accumulate(convergenceRates.begin(), convergenceRates.end(), 0.0) / convergenceRates.size();
+        }
+        std::cout << "Average Convergence Rate: " << averageConvergenceRate << std::endl;
 
         std::cout << "Final obtuse triangles count: " << countObtuseTriangles(cdt) << std::endl;
         CGAL::draw(cdt);
