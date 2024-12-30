@@ -801,11 +801,11 @@ namespace Triangulation {
                         steiner_point = calculate_perpendicular_bisector_point(p1, p2, p3); 
                     } else if (strategy == 5) {
                         steiner_point = projectPointOntoTriangle(Point(0, 0), p1, p2, p3);
-                    } else if(strategy == 6 && !delaunay_){
-                        steiner_point=getMeanAdjacentPoint(fit,best_cdt); //TODO SEGMETATION AFTER 1K LOOPS
-                        if (steiner_point.x()==0 && steiner_point.y()==0){
-                            continue;
-                        }
+                    // } else if(strategy == 6 &&  !delaunay_ && L<1000){
+                    //     steiner_point=getMeanAdjacentPoint(fit,best_cdt); //TODO SEGMETATION AFTER 1K LOOPS
+                    //     if (steiner_point.x()==0 && steiner_point.y()==0){
+                    //         continue;
+                    //     }
                     }
 
                     // Validate the Steiner point
