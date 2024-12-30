@@ -881,7 +881,7 @@ namespace Triangulation {
                             int best_obtuse_count = current_obtuse_count;
                             bool found_better = false;
 
-                            for (int attempt = 0; attempt < 50; ++attempt) {
+                            for (int attempt = 0; attempt < 20; ++attempt) {
                                 double random_x = randomDouble(min_x, max_x);
                                 double random_y = randomDouble(min_y, max_y);
 
@@ -2019,8 +2019,6 @@ namespace Triangulation {
         return true; // Όλο το boundary είναι μέρος κλειστού κύκλου
     }
 
-
-
     bool CDTProcessor::hasOpenConstraints() {
         // Δημιουργούμε έναν γράφο γειτνίασης από τους περιορισμούς
         std::unordered_map<int, std::vector<int>> graph;
@@ -2029,46 +2027,20 @@ namespace Triangulation {
             graph[constraint.second].push_back(constraint.first);
         }
 
-        // Ανιχνεύουμε αν υπάρχουν κλειστοί κύκλοι
-        std::unordered_set<int> visited;
-        bool hasClosedCycle = false;
-
-        std::function<void(int, int)> dfs = [&](int node, int parent) {
-            visited.insert(node);
-            for (int neighbor : graph[node]) {
-                if (neighbor == parent) continue; // Αγνόηση γονέα
-                if (visited.count(neighbor)) {
-                    // Βρέθηκε κλειστός κύκλος
-                    hasClosedCycle = true;
-                    return;
-                }
-                dfs(neighbor, node);
-            }
-        };
-
-        // Ελέγχουμε κάθε συνδεδεμένο υπογράφο για κλειστούς κύκλους
-        for (const auto& entry : graph) {
-            if (!visited.count(entry.first)) {
-                dfs(entry.first, -1);
-                if (hasClosedCycle) {
-                    std::cout << "OpenConstraints Check: Closed cycle found.\n";
-                    return false; // Υπάρχει κλειστός κύκλος
-                }
-            }
-        }
-
-        // Ελέγχουμε αν κάποιοι κόμβοι έχουν βαθμό διαφορετικό από 2
+        // Ελέγχουμε αν κάποιοι κόμβοι έχουν βαθμό διαφορετικό από 2 (ανοιχτός περιορισμός)
         for (const auto& entry : graph) {
             if (entry.second.size() != 2) {
                 std::cout << "OpenConstraints Check: Node with degree != 2 found (node " 
                         << entry.first << ").\n";
-                return true; // Όλοι οι περιορισμοί είναι ανοιχτοί
+                return true; // Βρέθηκε ανοιχτός περιορισμός
             }
         }
 
-        std::cout << "OpenConstraints Check: All constraints are open.\n";
-        return true; // Όλοι οι περιορισμοί είναι ανοιχτοί
+        // Επιστροφή false αν δεν βρέθηκαν ανοιχτοί περιορισμοί
+        std::cout << "OpenConstraints Check: No open constraints found.\n";
+        return false;
     }
+
 
     bool CDTProcessor::isAxisAlignedNonConvex() {
         for (size_t i = 0; i < region_boundary_.size(); ++i) {
@@ -2114,7 +2086,7 @@ namespace Triangulation {
         if (isConvex && num_constraints_==0) {
             std::cout << "Category A: Convex boundary without constraints." << std::endl;
             return 1;
-        } else if (isConvex && !hasClosedPolygonConstraints() ) {
+        } else if (isConvex && hasOpenConstraints() ) {
             std::cout << "Category B: Convex boundary with open constraints." << std::endl;
             return 2;
         }else if (isConvex && hasClosedPolygonConstraints() ) {
