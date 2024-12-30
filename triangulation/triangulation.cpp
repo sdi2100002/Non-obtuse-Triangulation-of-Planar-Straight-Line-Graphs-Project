@@ -1300,197 +1300,6 @@ namespace Triangulation {
         writeOutputToFile("../output/output.json", steiner_points_x, steiner_points_y, steiner_edges, countObtuseTriangles(cdt),globalRand);
     }
 
-
-
-    //This function implements the method SimulatedAnnealing
-    // void CDTProcessor::simulatedAnnealing(CDT& cdt,double alpha,double beta,int L){
-    //     // Step 1: Compute initial energy of the triangulation
-    //     int countOfSteinerPoints=0;
-    //     double currentEnergy = calculateEnergy(cdt, alpha, beta ,countOfSteinerPoints);
-    //     std::cout << "Initial energy: " << currentEnergy << "\n";
-
-    //     // Step 2: Initialize temperature
-    //     double temperature = 1.0;
-
-
-    //     //Those variables are using to write the output
-    //     std::vector<std::string> steiner_points_x;
-    //     std::vector<std::string> steiner_points_y;
-    //     std::vector<std::pair<int, int>> steiner_edges;
-
-    //     std::vector<double> steiner_points_x_double;  
-    //     std::vector<double> steiner_points_y_double;  
-        
-
-    //     // Step 3: Main SA loop
-    //     while (temperature >= 0) {
-    //         //std::cout << "Current temperature: " << temperature << "\n";
-
-    //         std::vector<CDT::Face_handle> faces;
-    //         for (auto fit = cdt.finite_faces_begin();fit != cdt.finite_faces_end();++fit){
-    //             faces.push_back(fit);
-    //         }
-
-            
-    //         // Step 4: Iterate over all finite faces in the CDT
-    //         for (auto face : faces) {
-                
-    //             // Get the vertices of the triangle
-    //             auto p1 = face->vertex(0)->point();
-    //             auto p2 = face->vertex(1)->point();
-    //             auto p3 = face->vertex(2)->point();
-
-    //             // double a2 = squaredDistance(p2, p3);
-    //             // double b2 = squaredDistance(p1, p3);
-    //             // double c2 = squaredDistance(p1, p2);
-
-    //             if (isObtuseTriangle(p1,p2,p3)){
-
-    //                 //For each strategy
-    //                 for (int strategy = 0; strategy <= 5; ++strategy) {
-    //                     Point steinerPoint;
-
-    //                     //Find the steiner point for each strategy
-    //                     if (strategy == 0) {
-    //                         steinerPoint = CGAL::circumcenter(p1, p2, p3);
-    //                     } else if (strategy == 1) {
-    //                         steinerPoint = calculate_incenter(p1, p2, p3);
-    //                     } else if (strategy == 2) {
-    //                         steinerPoint = getMidpointOfLongestEdge(p1, p2, p3);
-    //                     } else if (strategy == 3) {
-    //                         steinerPoint = CGAL::centroid(p1, p2, p3);
-    //                     } else if (strategy == 4) {
-    //                         steinerPoint = calculate_perpendicular_bisector_point(p1, p2, p3);
-    //                     } else if (strategy == 5) {
-    //                         steinerPoint = projectPointOntoTriangle(Point(0, 0), p1, p2, p3);
-    //                     }
-
-                        
-    //                     if (!CGAL::is_finite(steinerPoint.x()) || !CGAL::is_finite(steinerPoint.y())) {
-    //                         continue;
-    //                     }
-
-    //                     if (!isPointInsideBoundary(std::make_pair(steinerPoint.x(), steinerPoint.y()),region_boundary_, points_)) {
-    //                         continue;
-    //                     }
-
-    //                     // Step 6: Modify triangulation by adding the Steiner point
-    //                     CDT newCdt = cdt; // Create a copy of the CDT
-                        
-    //                     insertSteinerPoint(newCdt, {steinerPoint.x(), steinerPoint.y()});
-    //                     int newCountOfSteinerPoints=countOfSteinerPoints + 1 ;
-
-    //                     // Step 7: Calculate new energy
-    //                     double newEnergy = calculateEnergy(newCdt, alpha, beta,newCountOfSteinerPoints);
-    //                     double deltaEnergy = newEnergy - currentEnergy;
-
-    //                     // Step 8: Apply Metropolis criterion
-    //                     if (deltaEnergy < 0 || std::exp(-deltaEnergy / temperature) >= getRandomUniform()) {
-    //                         // Accept the new triangulation
-                            
-    //                         cdt = newCdt;
-    //                         countOfSteinerPoints=newCountOfSteinerPoints;
-    //                         currentEnergy = newEnergy;
-
-    //                         std::string x_frac = toFraction(steinerPoint.x());
-    //                         std::string y_frac = toFraction(steinerPoint.y());
-    //                         bool exists = false;
-    //                         for (size_t i = 0; i < steiner_points_x.size(); ++i) {
-    //                             if (steiner_points_x[i] == x_frac && steiner_points_y[i] == y_frac) {
-    //                                 exists = true;
-    //                                 break;
-    //                             }
-    //                         }
-                            
-    //                         if(!exists){
-    //                             steiner_points_x.push_back(x_frac);
-    //                             steiner_points_y.push_back(y_frac);
-
-    //                             steiner_points_x_double.push_back(steinerPoint.x());  // Store x as double
-    //                             steiner_points_y_double.push_back(steinerPoint.y());  // Store y as double
-    //                             //std::cout << "Accepted new configuration. Energy: " << currentEnergy << ", Steiner points: " << countOfSteinerPoints << "\n";  
-    //                         }
-    //                         break;
-
-    //                     } else {
-    //                         //std::cout << "Rejected configuration. Energy: " << currentEnergy << "\n";
-    //                     }
-    //                 }
-    //             }
-
-    //         }
-    //         // Step 9: Decrease the temperature
-    //         temperature -= 1.0 / L;
-    //     }
-    //     std::cout << "Final energy: " << currentEnergy << "\n";
-    //     std::cout << "Total Steiner points added: " << countOfSteinerPoints << std::endl;
-        
-    //     std::cout<<"Final obtuse triangles count : " << countObtuseTriangles(cdt) << std::endl;
-    //     CGAL::draw(cdt);
-
-    //     int index = 0;
-    //     for (auto vit = cdt.finite_vertices_begin(); vit != cdt.finite_vertices_end(); ++vit) {
-    //         vit->info() = index++;
-    //     }
-
-    //     std::cout << "Total vertices in CDT after insertion: " << index << std::endl;
-
-    //     // Find edges involving Steiner points
-    //     std::set<int> steiner_indices;
-    //     for (size_t i = 0; i < steiner_points_x_double.size(); ++i) {
-    //         double x = steiner_points_x_double[i];
-    //         double y = steiner_points_y_double[i];
-
-    //         bool found = false;
-    //         for (auto vit = cdt.finite_vertices_begin(); vit != cdt.finite_vertices_end(); ++vit) {
-    //             // Use squared distance for comparison
-    //             if (CGAL::squared_distance(vit->point(), Point(x, y)) < 1e-9) {
-    //                 steiner_indices.insert(vit->info());
-    //                 std::cout << "Matched Steiner point (" << x << ", " << y 
-    //                         << ") to vertex index: " << vit->info() << std::endl;
-    //                 found = true;
-    //                 break;
-    //             }
-    //         }
-    //         if (!found) {
-    //             std::cerr << "Failed to match Steiner point (" << x << ", " << y << ")" << std::endl;
-    //         }
-    //     }
-
-    //     steiner_edges.clear();
-
-    //     // Collect edges involving Steiner points
-    //     for (auto eit = cdt.finite_edges_begin(); eit != cdt.finite_edges_end(); ++eit) {
-    //         auto face = eit->first;
-    //         int index = eit->second;
-
-    //         auto vertex1 = face->vertex((index + 1) % 3);
-    //         auto vertex2 = face->vertex((index + 2) % 3);
-
-    //         if (vertex1 != nullptr && vertex2 != nullptr) {
-    //             int index1 = vertex1->info();
-    //             int index2 = vertex2->info();
-
-    //             // Check if either vertex is a Steiner point
-    //             if (steiner_indices.count(index1) > 0 || steiner_indices.count(index2) > 0) {
-    //                 if (index1 > index2) std::swap(index1, index2);
-    //                 steiner_edges.push_back({index1, index2});
-    //                 std::cout << "Edge added: (" << index1 << ", " << index2 << ")" << std::endl;
-    //             }
-    //         }
-    //     }
-
-    //     std::cout << "Total Steiner edges: " << steiner_edges.size() << std::endl;
-
-    //     if (steiner_indices.size() > steiner_edges.size()) {
-    //         std::cerr << "Warning: Some Steiner points are not associated with any edge!" << std::endl;
-    //     }
-
-
-        
-    //     //writeOutputToFile("../output/output.json", steiner_points_x, steiner_points_y, steiner_edges, countObtuseTriangles(cdt));
-    // }
-
     // This function is used to insert a Steiner point and update the CDT
     void CDTProcessor::insertSteinerPoint(CDT& cdt, const std::pair<double, double>& point) {
         //std::cout<<"inserting inside function..." << std::endl; 
@@ -1658,8 +1467,8 @@ namespace Triangulation {
     void CDTProcessor::antColonyOptimization(CDT& cdt, double alpha, double beta, double xi, double psi, int lambda, int num_ants, int num_cycles) {
         std::map<CDT::Face_handle, std::map<Point, double>> pheromone;
         bool globalRand=false;
-        // int steinerInsertedCounter=0;
-        // std::vector<double> convergenceRates;
+        int steinerInsertedCounter=0;
+        std::vector<double> convergenceRates;
         //init pheromones
         for (auto face = cdt.finite_faces_begin(); face != cdt.finite_faces_end(); ++face) {
             auto steiner_options = generateSteinerOptions(face);
@@ -1855,15 +1664,23 @@ namespace Triangulation {
             if(current_energy < best_energy || current_obtuse_count < best_obtuse_count){
                 best_energy=current_obtuse_count == 0 ? 0 : current_energy;
                 best_obtuse_count=current_obtuse_count;
+                int obtuseAfter=countObtuseTriangles(best_cdt);
                 copyTriangulation(merged_cdt,best_cdt);
-                // steinerInsertedCounter++;
+                steinerInsertedCounter++;
 
-                // int obtuseAfter=countObtuseTriangles(best_cdt);
-                // if(obtuseAfter < current_obtuse_count){
-                //     double p_n=log(static_cast<double>(obtuseAfter) / current_obtuse_count) /
-                //             log(static_cast<double>(steinerInsertedCounter) / (steinerInsertedCounter + 1));
-                //     convergenceRates.push_back(p_n);
-                // }
+                
+                if(obtuseAfter < countObtuseTriangles(cdt)){
+                    // Καταμέτρηση ρυθμού σύγκλισης
+                    if (current_obtuse_count > 0 && best_obtuse_count > 0 && steinerInsertedCounter > 0) {
+                        double obtuse_ratio = static_cast<double>(obtuseAfter) / current_obtuse_count;
+                        double steiner_ratio = static_cast<double>(steinerInsertedCounter) / (steinerInsertedCounter + 1);
+                        
+                        if (obtuse_ratio > 0 && steiner_ratio > 0) { // Αποφυγή log(0)
+                            double p_n = std::log(obtuse_ratio) / std::log(steiner_ratio);
+                            convergenceRates.push_back(p_n);
+                        }
+                    }
+                }
                 
 
 
@@ -1873,12 +1690,12 @@ namespace Triangulation {
             UpdatePheromones(pheromone, resolved_solutions, alpha, beta, xi);
         }
 
-        // double averageConvergenceRate=0.0;
-        // if(!convergenceRates.empty()){
-        //     std::cout<<"Calculating averageConvergenceRate" << std::endl;
-        //     averageConvergenceRate = std::accumulate(convergenceRates.begin(), convergenceRates.end(), 0.0) / convergenceRates.size();
-        // }
-        // std::cout << "Average Convergence Rate: " << averageConvergenceRate << std::endl;
+        double averageConvergenceRate=0.0;
+        if(!convergenceRates.empty()){
+            std::cout<<"Calculating averageConvergenceRate" << std::endl;
+            averageConvergenceRate = std::accumulate(convergenceRates.begin(), convergenceRates.end(), 0.0) / convergenceRates.size();
+        }
+        std::cout << "Average Convergence Rate: " << averageConvergenceRate << std::endl;
 
         //Copy the best triangulation back to original triangulation variable cdt
         copyTriangulation(best_cdt, cdt);
