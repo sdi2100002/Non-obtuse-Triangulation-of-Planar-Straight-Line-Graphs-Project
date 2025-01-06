@@ -165,18 +165,18 @@ void retrieveFields(
     method = obj.at("method").as_string().c_str();
 
     // Ανακτά τις παραμέτρους
-    const auto& params_obj = obj.at("parameters").as_object();
-    for (const auto& param : params_obj) {
-        // Use std::string(param.key()) to convert key to std::string
-        std::string key = std::string(param.key());
+    // const auto& params_obj = obj.at("parameters").as_object();
+    // for (const auto& param : params_obj) {
+    //     // Use std::string(param.key()) to convert key to std::string
+    //     std::string key = std::string(param.key());
 
-        // Ensure the value is numeric (double or int)
-        if (param.value().is_double()) {
-            parameters[key] = param.value().as_double();
-        } else if (param.value().is_int64()) {
-            parameters[key] = static_cast<double>(param.value().as_int64());
-        }
-    }
+    //     // Ensure the value is numeric (double or int)
+    //     if (param.value().is_double()) {
+    //         parameters[key] = param.value().as_double();
+    //     } else if (param.value().is_int64()) {
+    //         parameters[key] = static_cast<double>(param.value().as_int64());
+    //     }
+    // }
     
 
     // Ανακτά την τιμή του delaunay

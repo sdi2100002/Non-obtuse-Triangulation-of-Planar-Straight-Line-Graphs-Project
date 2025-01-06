@@ -659,21 +659,9 @@ namespace Triangulation {
     //This function is used to select and call the method requested 
     void CDTProcessor::selectMethod(CDT &cdt, const std::string& method,const std::map<std::string, double>& parameters){
         int category=detectCategory(cdt);
-    
 
-        if (method == "local") { //Local search moethod
-            std::cout << "Selected method: Local Search\n";
-            std::cout << "Parameters:\n";
-            for (const auto& [key, value] : parameters) {
-                std::cout << "  " << key << ": " << value << "\n";
-            }
-            // Execute local search
-            std::cout << "Executing local search...\n";
-            auto iter = parameters.begin();
-            double value = iter->second;
-            localSearch(cdt, value);
-        } 
-        else if (method == "sa") { // Simulated Annealing method
+        if (category==1 || category==2 || category==3){
+            method_="sa";
             std::cout << "Selected method: Simulated Annealing\n";
             std::cout << "Parameters:\n";
             for (const auto& [key, value] : parameters) {
@@ -691,33 +679,19 @@ namespace Triangulation {
             std::cout << "Using alpha: " << alpha << ", beta: " << beta << ", L: " << L << "\n";
 
             simulatedAnnealing(cdt,alpha,beta,L);
-        } 
-        else if (method == "ant") { // Ant Colony Optimization method
-            std::cout << "Selected method: Ant Colony Optimization\n";
+        }
+        else if (category==4 || category==5){
+            method_="local";
+            std::cout << "Selected method: Local Search\n";
             std::cout << "Parameters:\n";
             for (const auto& [key, value] : parameters) {
                 std::cout << "  " << key << ": " << value << "\n";
             }
-            //Extract and use the parameters needed to perfrorm ant colony
-            double alpha = (parameters.find("alpha") != parameters.end()) ? parameters.at("alpha") : 0.0;
-            double beta = (parameters.find("beta") != parameters.end()) ? parameters.at("beta") : 0.0;
-            double xi = (parameters.find("xi") != parameters.end()) ? parameters.at("xi") : 1.0;
-            double psi = (parameters.find("psi") != parameters.end()) ? parameters.at("psi") : 1.0;
-            double lambda = (parameters.find("lambda") != parameters.end()) ? parameters.at("lambda") : 0.1;
-            int kappa = (parameters.find("kappa") != parameters.end()) ? static_cast<int>(parameters.at("kappa")) : 5;
-            int L = (parameters.find("L") != parameters.end()) ? static_cast<int>(parameters.at("L")) : 10;
-
-            std::cout<<"alpha: " << alpha << std::endl;
-            
-            
-            std::cout << "Executing ant colony optimization...\n";
-
-            antColonyOptimization(cdt,alpha,beta,xi,psi,lambda,kappa,L);
-        } 
-        else {
-            // Unknow method given
-            std::cerr << "Error: Unknown method \"" << method << "\".\n";
-            std::cerr << "Available methods: local, sa, ant\n";
+            // Execute local search
+            std::cout << "Executing local search...\n";
+            auto iter = parameters.begin();
+            double value = iter->second;
+            localSearch(cdt, value);
         }
     }
 
@@ -801,11 +775,6 @@ namespace Triangulation {
                         steiner_point = calculate_perpendicular_bisector_point(p1, p2, p3); 
                     } else if (strategy == 5) {
                         steiner_point = projectPointOntoTriangle(Point(0, 0), p1, p2, p3);
-                    // } else if(strategy == 6 &&  !delaunay_ && L<1000){
-                    //     steiner_point=getMeanAdjacentPoint(fit,best_cdt); //TODO SEGMETATION AFTER 1K LOOPS
-                    //     if (steiner_point.x()==0 && steiner_point.y()==0){
-                    //         continue;
-                    //     }
                     }
 
                     // Validate the Steiner point
@@ -2030,14 +1999,11 @@ namespace Triangulation {
         // Ελέγχουμε αν κάποιοι κόμβοι έχουν βαθμό διαφορετικό από 2 (ανοιχτός περιορισμός)
         for (const auto& entry : graph) {
             if (entry.second.size() != 2) {
-                std::cout << "OpenConstraints Check: Node with degree != 2 found (node " 
-                        << entry.first << ").\n";
                 return true; // Βρέθηκε ανοιχτός περιορισμός
             }
         }
 
         // Επιστροφή false αν δεν βρέθηκαν ανοιχτοί περιορισμοί
-        std::cout << "OpenConstraints Check: No open constraints found.\n";
         return false;
     }
 
@@ -2084,19 +2050,14 @@ namespace Triangulation {
 
 
         if (isConvex && num_constraints_==0) {
-            std::cout << "Category A: Convex boundary without constraints." << std::endl;
             return 1;
         } else if (isConvex && hasOpenConstraints() ) {
-            std::cout << "Category B: Convex boundary with open constraints." << std::endl;
             return 2;
         }else if (isConvex && hasClosedPolygonConstraints() ) {
-            std::cout << "Category C: Convex boundary with closed polygon constraints." << std::endl;
             return 3;
         } else if (isAxisAlignedNonConvex()) {
-            std::cout << "Category D: Non-convex boundary with axis-aligned edges without constraints." << std::endl;
             return 4;
         } else if (isIrregularNonConvex()) {
-            std::cout << "Category E: Irregular non-convex boundary." << std::endl;
             return 5;
         } else {
             std::cout << "Unrecognized category." << std::endl;

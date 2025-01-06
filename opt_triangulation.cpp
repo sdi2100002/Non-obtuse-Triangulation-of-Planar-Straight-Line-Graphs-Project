@@ -19,19 +19,35 @@ using namespace boost::json;
 int main(int argc, char *argv[]) {
 
     std::cout<<"argc "<<argc<<std::endl;
-    if(argc<5){
-        std::cerr << "Usage: " << argv[0] << "-i /path/to/input.json -o /path/to/output.json" << std::endl;
+    if(argc<6){
+        std::cerr << "Usage: " << argv[0] << "-i /path/to/input.json -o /path/to/output.json pre_selected_params " << std::endl;
         return 1;
     }
 
     std::string inputPath,outputPath;
+    std::map<std::string,double> parameters = {
+        {"alpha",2.0},
+        {"beta",5.0},
+        {"xi",1.0},
+        {"psi",3.0},
+        {"lambda",0.5},
+        {"kappa", 50},
+        {"L", 100}
+    };
 
-    for (int i = 1; i < argc; i += 2) {
+    for (int i = 1; i < argc; i++) {
         std::string flag(argv[i]);
         if (flag == "-i") {
             inputPath = argv[i + 1];
         } else if (flag == "-o") {
             outputPath = argv[i + 1];
+        }else if (parameters.find(flag)!=parameters.end()){
+            if (i+1<argc){
+                parameters[flag]=std::stod(argv[++i]);
+            }else{
+                std::cerr << "Error : Missing value for parameter " << flag << std::endl;
+                return 1;
+            }
         }
     
     }
@@ -57,7 +73,6 @@ int main(int argc, char *argv[]) {
     std::vector<std::pair<int, int>> additional_constraints;
     std::vector<int> region_boundary;
     std::string method;
-    std::map<std::string,double> parameters;
     bool delaunay;
 
 
