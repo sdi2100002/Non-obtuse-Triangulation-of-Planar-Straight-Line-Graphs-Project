@@ -164,6 +164,7 @@ void retrieveFields(
     // Ανακτά τη μέθοδο
     method = obj.at("method").as_string().c_str();
 
+    //ΕΓΙΝΕ ΣΧΟΛΙΟ ΚΑΘΏΣ ΠΛΕΟΝ ΠΑΊΡΝΟΥΜΕ ΤΙΣ ΠΑΡΑΜΈΤΡΟΥΣ ΑΠΟ ΤΗΝ ΓΡΑΜΜΗ ΕΝΤΟΛΩΝ ΚΑΙ ΌΧΙ ΑΠΟ ΤΟ TEST FILE
     // Ανακτά τις παραμέτρους
     // const auto& params_obj = obj.at("parameters").as_object();
     // for (const auto& param : params_obj) {

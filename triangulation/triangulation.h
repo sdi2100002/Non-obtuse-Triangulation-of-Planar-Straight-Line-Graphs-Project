@@ -160,18 +160,26 @@ namespace Triangulation {
         
         //This function is used to write the final output to JSON file
         void writeOutputToFile(const std::string& filepath,const std::vector<std::string>& steiner_points_x,const std::vector<std::string>& steiner_points_y,const std::vector<std::pair<int, int>>& edges,int obtuse_count,bool randomizationUsed);
-
-        //This function gets the index of a specific point in a list of points
-        int getPointIndex(const Point& point, const std::vector<std::pair<double, double>>& points);
         
+        //This function returns true if the boundary is non convex and not axis aligned otherwise returns false
         bool isIrregularNonConvex();
+
+        //This function returns true if all edges are axis aligned otherwise returns false
         bool isAxisAlignedNonConvex();
+        
+        //This function returns true if all edges are present in the graph create a closed polygon otherwise returns false
         bool hasClosedPolygonConstraints();
+
+        //This function returns true if there is at least one open constraint otherwise false
         bool hasOpenConstraints();
+
+        //This function returns true if the boundary is convex otherwise returns false
         bool isConvexBoundary();
 
+        //This function returns an int depends on the category the cdt belongs to , 1 for category A , 2 for categor B etc...
         int detectCategory(CDT &cdt);
 
+        //This function generates a random double value within the specified range
         double randomDouble(double min, double max);
     };
 }

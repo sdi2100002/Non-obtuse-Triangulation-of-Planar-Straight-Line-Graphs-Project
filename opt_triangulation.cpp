@@ -25,6 +25,7 @@ int main(int argc, char *argv[]) {
     }
 
     std::string inputPath,outputPath;
+    //DEFAULT VALUES
     std::map<std::string,double> parameters = {
         {"alpha",2.0},
         {"beta",5.0},
@@ -41,7 +42,7 @@ int main(int argc, char *argv[]) {
             inputPath = argv[i + 1];
         } else if (flag == "-o") {
             outputPath = argv[i + 1];
-        }else if (parameters.find(flag)!=parameters.end()){
+        }else if (parameters.find(flag)!=parameters.end()){//VALUES FOR PARAMETERS
             if (i+1<argc){
                 parameters[flag]=std::stod(argv[++i]);
             }else{

@@ -274,7 +274,7 @@ namespace Triangulation {
                 auto new_vertex=cdt.insert(best_steiner_point);
                 steiner_points.push_back({best_steiner_point.x(),best_steiner_point.y()});
                 obtuse_before = best_obtuse_after_sim;
-                std::cout << "Προσθήκη Steiner point βελτίωσε την κατάσταση. Αμβλυγώνια τρίγωνα: " << obtuse_before << std::endl;
+                std::cout << "Προσθήκη Steiner point βελτίωσε την κατάσταση. "<< std::endl;
                 
             }
             processConvexPolygon(cdt);
@@ -299,10 +299,6 @@ namespace Triangulation {
 
         // Print the output JSON
         printOutputJson(output_json);
-
-        //Count and print the number of the obtuse triangles after the process of triangulation
-        obtuse_before = countObtuseTriangles(cdt);
-        std::cout << "Αμβλυγώνια τρίγωνα μετά την επεξεργασία: " << obtuse_before << std::endl;
 
         //Visulize the final triangulation
         CGAL::draw(cdt);
@@ -658,8 +654,10 @@ namespace Triangulation {
 
     //This function is used to select and call the method requested 
     void CDTProcessor::selectMethod(CDT &cdt, const std::string& method,const std::map<std::string, double>& parameters){
+        //Find the category the cdt belongs to
         int category=detectCategory(cdt);
 
+        //In case the cdt belongs to categories A,B,C we will use the simulated annealing
         if (category==1 || category==2 || category==3){
             method_="sa";
             std::cout << "Selected method: Simulated Annealing\n";
@@ -679,7 +677,7 @@ namespace Triangulation {
             std::cout << "Using alpha: " << alpha << ", beta: " << beta << ", L: " << L << "\n";
 
             simulatedAnnealing(cdt,alpha,beta,L);
-        }
+        }//In case the cdt belongs to the categories D,E we will use the local search
         else if (category==4 || category==5){
             method_="local";
             std::cout << "Selected method: Local Search\n";
@@ -697,11 +695,11 @@ namespace Triangulation {
 
     //This function is used to perform the local search method (similar to our own processTriangulation() method)
     void CDTProcessor::localSearch(CDT& cdt, double L) {
-        int counter = 0;
-        int steinerCount=0;
+        int counter = 0; //Iteration counter
+        int steinerCount=0; //Total steiner points added
         int noSteinerCount = 0; // Counter for consecutive iterations without adding a Steiner point
-        bool hasObtuse = true;
-        bool globalRand = false;
+        bool hasObtuse = true; //Flag to check if there are obtuse triangles
+        bool globalRand = false;//Flag to indicate if randomization was used
 
         int obtuseCount = countObtuseTriangles(cdt);
         int newL = static_cast<int>(L);
@@ -719,10 +717,10 @@ namespace Triangulation {
         std::vector<double> convergenceRates;
 
         while (hasObtuse && counter < newL) {
-            hasObtuse = false;
+            hasObtuse = false;//reset flag for each iteration
             int current_obtuse_count = countObtuseTriangles(cdt);
 
-            std::vector<CDT::Face_handle> obtuse_triangles;
+            std::vector<CDT::Face_handle> obtuse_triangles;//List of obtuse triangles
 
             for (auto fit = cdt.finite_faces_begin(); fit != cdt.finite_faces_end(); ++fit) {
                 // Skip triangles outside the region boundary
@@ -740,10 +738,10 @@ namespace Triangulation {
                     !CGAL::is_finite(p3.x()) || !CGAL::is_finite(p3.y())) {
                     continue;
                 }
-
+                // Check if the triangle is obtuse
                 if (isObtuseTriangle(p1, p2, p3)) {
                     hasObtuse = true;
-                    obtuse_triangles.push_back(fit);
+                    obtuse_triangles.push_back(fit);//Add to list
                 }
             }
 
@@ -804,7 +802,7 @@ namespace Triangulation {
 
                     // Keep the best triangulation
                     if (new_obtuse_count < best_obtuse_count) {
-                        std::cout<<"Placed a steiner : " << steiner_point << std::endl ;
+                        std::cout<<"Placed a steiner : " <<  std::endl ;
                         best_cdt = new_cdt;
                         best_obtuse_count = new_obtuse_count;
                         // Store Steiner point
@@ -831,8 +829,9 @@ namespace Triangulation {
                         noSteinerCount++;
                         if (noSteinerCount>=50){
                             globalRand = true;
-                            //std::cout << "Randomizing Steiner point due to lack of progress." << std::endl;
+                            //place a random steiner if there are 50 loops done without placing a steiner
 
+                            //Init vars to calculate the bounding box of the region defined by region_boundary
                             double min_x = std::numeric_limits<double>::max();
                             double max_x = std::numeric_limits<double>::lowest();
                             double min_y = std::numeric_limits<double>::max();
@@ -849,13 +848,15 @@ namespace Triangulation {
                             CGAL::Point_2<CGAL::Epick> best_random_point;
                             int best_obtuse_count = current_obtuse_count;
                             bool found_better = false;
-
+                            
+                            //Try 20 times to place a random point within the bounding box to
                             for (int attempt = 0; attempt < 20; ++attempt) {
                                 double random_x = randomDouble(min_x, max_x);
                                 double random_y = randomDouble(min_y, max_y);
 
                                 CGAL::Point_2<CGAL::Epick> random_point(random_x, random_y);
 
+                                //Check if the random point lies inside the boundary of the region
                                 if (isPointInsideBoundary(std::make_pair(random_point.x(), random_point.y()), region_boundary_, points_)) {
                                     try {
                                         CDT new_cdt = cdt;
@@ -864,6 +865,7 @@ namespace Triangulation {
 
                                         int new_obtuse_count = countObtuseTriangles(new_cdt);
 
+                                        //If the point reduces the number of obtuse triangles then select this point 
                                         if (new_obtuse_count < best_obtuse_count) {
                                             best_random_point = random_point;
                                             best_obtuse_count = new_obtuse_count;
@@ -876,10 +878,11 @@ namespace Triangulation {
                                 }
                             }
 
+                            //if a better random steiner point found insert it into the CDT
                             if (found_better) {
                                 cdt.insert(best_random_point);
                                 processConvexPolygon(cdt);
-                                std::cout << "Placed random Steiner: " << best_random_point << std::endl;
+                                std::cout << "Placed random Steiner: " << std::endl;
 
                                 steiner_points_x_double.push_back(best_random_point.x());
                                 steiner_points_y_double.push_back(best_random_point.y());
@@ -895,9 +898,11 @@ namespace Triangulation {
                                 steinerCount++;
                             }   
                         }
+                        //Handle the case a steiner point was added
                         if (steinerAdded) {
                             noSteinerCount = 0; // Reset counter if a Steiner point was added
                             
+                            //Calculate the convergence rate based on the change in obtuse triangels and the number of steiner inserted
                             int obtuseAfter=countObtuseTriangles(cdt);
                             if(obtuseAfter < current_obtuse_count){
                                 double p_n=log(static_cast<double>(obtuseAfter) / current_obtuse_count) /
@@ -945,8 +950,6 @@ namespace Triangulation {
             for (auto vit = cdt.finite_vertices_begin(); vit != cdt.finite_vertices_end(); ++vit) {
                 if (CGAL::squared_distance(vit->point(), Point(x, y)) < 1e-9) {
                     steiner_indices.insert(vit->info());
-                    std::cout << "Matched Steiner point (" << x << ", " << y 
-                            << ") to vertex index: " << vit->info() << std::endl;
                     found = true;
                     break;
                 }
@@ -972,7 +975,6 @@ namespace Triangulation {
                 if (steiner_indices.count(index1) > 0 || steiner_indices.count(index2) > 0) {
                     if (index1 > index2) std::swap(index1, index2);
                     steiner_edges.push_back({index1, index2});
-                    std::cout << "Edge added: (" << index1 << ", " << index2 << ")" << std::endl;
                 }
             }
         }
@@ -986,6 +988,7 @@ namespace Triangulation {
         writeOutputToFile("../output/output.json", steiner_points_x, steiner_points_y, steiner_edges, countObtuseTriangles(cdt), globalRand);
     }
 
+    // Generate a random double value within the specified range
     double CDTProcessor::randomDouble(double min, double max) {
         std::random_device rd;
         std::mt19937 gen(rd());
@@ -993,19 +996,6 @@ namespace Triangulation {
         return dis(gen);
     }
 
-    //This function finds the index of a given CGAL point in a vector
-    int CDTProcessor::getPointIndex(const Point& point, const std::vector<std::pair<double, double>>& points) {
-        for (size_t i = 0; i < points.size(); ++i) {
-            // Compare CGAL Point with the pair
-            if (std::abs(points[i].first - point.x()) < 1e-9 &&
-                std::abs(points[i].second - point.y()) < 1e-9) {
-                return static_cast<int>(i);
-            }
-        }
-        return -1;  // Return -1 if the point is not found
-    }
-
-    //This function creates a CDT using CGAL
     CDT CDTProcessor::createCDT() {
         CDT cdt;
         std::vector<Point> cgal_points;
@@ -1021,6 +1011,7 @@ namespace Triangulation {
         }
         return cdt;
     }
+
 
 
     void CDTProcessor::simulatedAnnealing(CDT& cdt, double alpha, double beta, int L) {
@@ -1063,7 +1054,7 @@ namespace Triangulation {
                 if (isObtuseTriangle(p1, p2, p3)) {
                     bool foundImprovement = false;
 
-                    // Πρώτη φάση: 20 προσπάθειες με Metropolis Criterion
+                    // Phase 1 : try 20 times with Metropolis criterion 
                     for (int tries = 0; tries < 20 && !foundImprovement; ++tries) {
                         for (int strategy = 0; strategy <= 5; ++strategy) {
                             Point steinerPoint;
@@ -1097,7 +1088,7 @@ namespace Triangulation {
                             double newEnergy = calculateEnergy(newCdt, alpha, beta, newCountOfSteinerPoints);
                             double deltaEnergy = newEnergy - currentEnergy;
 
-                            // Metropolis Criterion
+                            // Metropolis Criterion for acceptance
                             if (deltaEnergy < 0 || std::exp(-deltaEnergy / temperature) >= getRandomUniform()) {
                                 steinerInserted=true;
                                 cdt = newCdt;
@@ -1132,14 +1123,15 @@ namespace Triangulation {
                         }
                     }
 
-                    // Δεύτερη φάση: 50 τυχαίες προσπάθειες
+                    // Phase 2 : 50 random attempts if no improvements found 
                     if (counterNoImprovements>=50) {
-                        globalRand=true;
+                        globalRand=true;//Global random attempts
                         double min_x = std::numeric_limits<double>::max();
                         double max_x = std::numeric_limits<double>::lowest();
                         double min_y = std::numeric_limits<double>::max();
                         double max_y = std::numeric_limits<double>::lowest();
 
+                        //Determine boundary limits
                         for (int index : region_boundary_) {
                             const auto& point = points_[index];
                             min_x = std::min(min_x, point.first);
@@ -1151,6 +1143,8 @@ namespace Triangulation {
                         CGAL::Point_2<CGAL::Epick> best_random_point;
                         int best_obtuse_count = countObtuseTriangles(cdt);
                         bool found_better = false;
+
+                        //Perform 50 random attempts
                         for (int randomTries = 0; randomTries < 50; ++randomTries) {
                             double random_x=randomDouble(min_x,max_x);
                             double random_y=randomDouble(min_y,max_y);
@@ -1162,13 +1156,14 @@ namespace Triangulation {
                                 continue;
                             }
                             
-
+                            //Attempt to insert the random steiner point
                             CDT newCdt = cdt;
                             insertSteinerPoint(newCdt, {random_x, random_y});
                             processConvexPolygon(newCdt);
                             int newCountOfSteinerPoints = countOfSteinerPoints + 1;
                             int newObtuseTriangles = countObtuseTriangles(newCdt);
-
+                            
+                            //Checks if the random insertion reduced obtuse triangles
                             if (newObtuseTriangles < countObtuseTriangles(cdt)) {
                                 steinerInserted=true;
                                 cdt = newCdt;
@@ -1188,14 +1183,17 @@ namespace Triangulation {
                     }
                 }
             }
+            // If a Steiner point was inserted in this iteration
             if(steinerInserted){
                 int obtuseAfter=countObtuseTriangles(cdt);
                 if(obtuseAfter < current_obtuse_count){
+                    // Calculate and store convergence rate
                     double p_n=log(static_cast<double>(obtuseAfter) / current_obtuse_count) /
                             log(static_cast<double>(countOfSteinerPoints) / (countOfSteinerPoints + 1));
                             convergenceRates.push_back(p_n);
                 }
             }
+            //decrease temperature
             temperature -= 1.0 / L;
         }
 
@@ -1218,7 +1216,7 @@ namespace Triangulation {
 
         std::cout << "Total vertices in CDT after insertion: " << index << std::endl;
 
-        // Εύρεση ακμών με Steiner σημεία
+        // Identify edges involving Steiner points
         std::set<int> steiner_indices;
         for (size_t i = 0; i < steiner_points_x_double.size(); ++i) {
             double x = steiner_points_x_double[i];
@@ -1228,8 +1226,6 @@ namespace Triangulation {
             for (auto vit = cdt.finite_vertices_begin(); vit != cdt.finite_vertices_end(); ++vit) {
                 if (CGAL::squared_distance(vit->point(), Point(x, y)) < 1e-9) {
                     steiner_indices.insert(vit->info());
-                    std::cout << "Matched Steiner point (" << x << ", " << y
-                            << ") to vertex index: " << vit->info() << std::endl;
                     found = true;
                     break;
                 }
@@ -1255,7 +1251,6 @@ namespace Triangulation {
                 if (steiner_indices.count(index1) > 0 || steiner_indices.count(index2) > 0) {
                     if (index1 > index2) std::swap(index1, index2);
                     steiner_edges.push_back({index1, index2});
-                    std::cout << "Edge added: (" << index1 << ", " << index2 << ")" << std::endl;
                 }
             }
         }
@@ -1435,8 +1430,8 @@ namespace Triangulation {
     //This function implements the ant Colony method
     void CDTProcessor::antColonyOptimization(CDT& cdt, double alpha, double beta, double xi, double psi, int lambda, int num_ants, int num_cycles) {
         std::map<CDT::Face_handle, std::map<Point, double>> pheromone;
-        bool globalRand=false;
-        int steinerInsertedCounter=0;
+        bool globalRand=false;// Flag to indicate if random insertion was used
+        int steinerInsertedCounter=0;// Count of Steiner points inserted
         std::vector<double> convergenceRates;
         //init pheromones
         for (auto face = cdt.finite_faces_begin(); face != cdt.finite_faces_end(); ++face) {
@@ -1445,7 +1440,7 @@ namespace Triangulation {
                 pheromone[face][point_option] = 1.0; // Αρχική τιμή φερομονών
             }
         }
-
+        // Initialize variables to track the best CDT and its energy
         CDT best_cdt;
         copyTriangulation(cdt, best_cdt);
         int best_obtuse_count = countObtuseTriangles(best_cdt);
@@ -1571,18 +1566,19 @@ namespace Triangulation {
 
             // Resolve conflicts between solutions proposed by different ants
             std::vector<AntSolution> resolved_solutions = resolve_conflicts(all_solutions);
-
+            // Attempt random point insertion if no ant improved the triangulation
             if (resolved_solutions.empty()) {
                 globalRand=true;
                 
                 // No ant improved the triangulation: Attempt random point insertion
-                int max_attempts = 50;
+                int max_attempts = 50;// Maximum attempts for random insertion
                 for (int attempt = 0; attempt < max_attempts; ++attempt) {
                     double min_x = std::numeric_limits<double>::max();
                     double max_x = std::numeric_limits<double>::lowest();
                     double min_y = std::numeric_limits<double>::max();
                     double max_y = std::numeric_limits<double>::lowest();
 
+                    // Calculate bounding box of the region
                     for (int index : region_boundary_) {
                         const auto& point = points_[index];
                         min_x = std::min(min_x, point.first);
@@ -1591,6 +1587,7 @@ namespace Triangulation {
                         max_y = std::max(max_y, point.second);
                     }
 
+                    // Generate a random point within the bounding box
                     double random_x = randomDouble(min_x, max_x);
                     double random_y = randomDouble(min_y, max_y);
 
@@ -1600,10 +1597,12 @@ namespace Triangulation {
                         continue;
                     }
 
-                    CDT temp_cdt;
+                    // Simulate the addition of the random point to a temporary CDT
+                    CDT temp_cdt;   
                     copyTriangulation(best_cdt, temp_cdt);
                     temp_cdt.insert(random_point);
 
+                    // Check if the random point improves the triangulation
                     int new_obtuse_count = countObtuseTriangles(temp_cdt);
                     if (new_obtuse_count < best_obtuse_count) {
                         resolved_solutions.push_back({nullptr, random_point, static_cast<double>(best_obtuse_count - new_obtuse_count)});
@@ -1639,7 +1638,7 @@ namespace Triangulation {
 
                 
                 if(obtuseAfter < countObtuseTriangles(cdt)){
-                    // Καταμέτρηση ρυθμού σύγκλισης
+                    // Calculate and store the convergence rate
                     if (current_obtuse_count > 0 && best_obtuse_count > 0 && steinerInsertedCounter > 0) {
                         double obtuse_ratio = static_cast<double>(obtuseAfter) / current_obtuse_count;
                         double steiner_ratio = static_cast<double>(steinerInsertedCounter) / (steinerInsertedCounter + 1);
@@ -1927,101 +1926,107 @@ namespace Triangulation {
 
 
     bool CDTProcessor::isConvexBoundary() {
-        int n = region_boundary_.size(); // Χρησιμοποιούμε το μέγεθος του boundary.
-        if (n < 3) return false; // Λιγότερα από 3 σημεία δεν σχηματίζουν πολύγωνο.
+        int n = region_boundary_.size(); //Get the number of points in the region boundary
+        if (n < 3) return false; //A polygon requires minimum 3 points
 
-        double epsilon = 1e-6; // Ανοχή για αριθμητική σταθερότητα.
-        int sign = 0; // Αποθηκεύει τη διεύθυνση της πρώτης μη μηδενικής στροφής.
-
+        double epsilon = 1e-6; // Tolerance
+        int sign = 0; //Save the direction of the first non-zero turn
+        
+        //Loop through all points in the region boundary to check for consistent turning direction 
         for (int i = 0; i < n; ++i) {
-            int curr = region_boundary_[i];
-            int next = region_boundary_[(i + 1) % n];
+            int curr = region_boundary_[i]; //current point index
+            int next = region_boundary_[(i + 1) % n];//next 
             int next_next = region_boundary_[(i + 2) % n];
 
-            // Συντεταγμένες των σημείων.
+            // Coordinates of the points
             double x1 = points_[next].first - points_[curr].first;
             double y1 = points_[next].second - points_[curr].second;
             double x2 = points_[next_next].first - points_[next].first;
             double y2 = points_[next_next].second - points_[next].second;
 
-            // Υπολογισμός του cross product.
+            // Calculate the cross product
             double crossProduct = x1 * y2 - y1 * x2;
 
-            // Αγνόησε μικρές τιμές κοντά στο μηδέν.
+            // Ignore small values close to 0 
             if (std::abs(crossProduct) <= epsilon) {
                 continue;
             }
 
-            // Ρύθμισε τη διεύθυνση για την πρώτη έγκυρη στροφή.
+            // Set the turn direction for the first calid cross product
             if (sign == 0) {
                 sign = (crossProduct > 0) ? 1 : -1;
             } else if ((crossProduct > 0) != (sign > 0)) {
-                // Αν βρεθεί στροφή αντίθετης κατεύθυνσης, το boundary δεν είναι κυρτό.
+                // If there is a turn in the opposite direction the boundary is not convex
                 std::cout << "Convex Check: Non-convex turn at index " << i << ".\n";
                 return false;
             }
         }
-
-        // Όλες οι στροφές είναι συνεπείς.
+        //case that all the turns are consistent so the boundary is convex
         return true;
     }
 
     
     bool CDTProcessor::hasClosedPolygonConstraints() {
-        // Δημιουργούμε γράφο γειτνίασης από τους περιορισμούς
+        // Create an adjacency graph from constraints
         std::unordered_map<int, std::vector<int>> graph;
         for (const auto& constraint : constraints_) {
             graph[constraint.first].push_back(constraint.second);
             graph[constraint.second].push_back(constraint.first);
         }
 
-        // Ελέγχουμε αν ολόκληρο το region_boundary_ σχηματίζει κλειστό κύκλο
+        // Checks if the entire boundary forms a closed loop 
         for (size_t i = 0; i < region_boundary_.size(); ++i) {
-            int curr = region_boundary_[i];
-            int next = region_boundary_[(i + 1) % region_boundary_.size()];
+            int curr = region_boundary_[i];//Current point
+            int next = region_boundary_[(i + 1) % region_boundary_.size()];//Next point
 
+            //Ensure the edge exists in the constraints graph
             auto it = std::find(graph[curr].begin(), graph[curr].end(), next);
             if (it == graph[curr].end()) {
-                return false; // Το τμήμα του boundary δεν υπάρχει στα constraints
+                return false; //If there is an edge missing it is not a closed polygon
             }
         }
-        return true; // Όλο το boundary είναι μέρος κλειστού κύκλου
+        //All edges are present in the graph create a closed polygon
+        return true; 
     }
 
     bool CDTProcessor::hasOpenConstraints() {
-        // Δημιουργούμε έναν γράφο γειτνίασης από τους περιορισμούς
+        // Create an adjacency graph from constraints
         std::unordered_map<int, std::vector<int>> graph;
         for (const auto& constraint : constraints_) {
             graph[constraint.first].push_back(constraint.second);
             graph[constraint.second].push_back(constraint.first);
         }
 
-        // Ελέγχουμε αν κάποιοι κόμβοι έχουν βαθμό διαφορετικό από 2 (ανοιχτός περιορισμός)
+        // Checks if there is any node with a degree different than 2
         for (const auto& entry : graph) {
             if (entry.second.size() != 2) {
-                return true; // Βρέθηκε ανοιχτός περιορισμός
+                return true; // There is an open constraint
             }
         }
 
-        // Επιστροφή false αν δεν βρέθηκαν ανοιχτοί περιορισμοί
+        //There is not an open constraint
         return false;
     }
 
 
     bool CDTProcessor::isAxisAlignedNonConvex() {
+        //Checks if all edges of the boundary are either horizontal or vertical
         for (size_t i = 0; i < region_boundary_.size(); ++i) {
             size_t j = (i + 1) % region_boundary_.size();
             if (points_[region_boundary_[i]].first != points_[region_boundary_[j]].first &&
                 points_[region_boundary_[i]].second != points_[region_boundary_[j]].second) {
+                // If an edge is neither horizontal nor vertical the boundary is not axis aligned.
                 std::cout << "Axis-Aligned Check: Boundary is not axis-aligned.\n";
                 return false;
             }
         }
+        //all edges are axis aligned
         std::cout << "Axis-Aligned Check: Boundary is axis-aligned.\n";
         return true;
     }
 
     bool CDTProcessor::isIrregularNonConvex() {
+        //Checks if the boundary is non convex and not axis aligned
         if (!isConvexBoundary() && !isAxisAlignedNonConvex()) {
             std::cout << "Irregular Non-Convex Check: Boundary is irregular non-convex.\n";
             return true;
@@ -2044,21 +2049,22 @@ namespace Triangulation {
         }
         std::cout << std::endl;
 
+        //Checks if the boundary is convex
         bool isConvex=isConvexBoundary();
 
         std::cout<<"print is convex :  " << isConvex << std::endl;
 
 
         if (isConvex && num_constraints_==0) {
-            return 1;
+            return 1; //Convex boundary without constraints (CATEGORY A)
         } else if (isConvex && hasOpenConstraints() ) {
-            return 2;
+            return 2; //Convex boundary with open constraints (CATEGORY B)
         }else if (isConvex && hasClosedPolygonConstraints() ) {
-            return 3;
+            return 3;//Convex boundary with closed polygon constraints (CATEGORY C)
         } else if (isAxisAlignedNonConvex()) {
-            return 4;
+            return 4;//Axis aligned non convex boundary (CATEGORY D)
         } else if (isIrregularNonConvex()) {
-            return 5;
+            return 5;//Irregular non convex boundary (CATEGORY E)
         } else {
             std::cout << "Unrecognized category." << std::endl;
             return -1;
